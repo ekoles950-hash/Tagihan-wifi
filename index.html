@@ -102,7 +102,7 @@
       const formatRupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(tagihan || 0);
 
       // Format Pesan WhatsApp
-      const pesan = `Halo kak *${nama}*,\n\nIni adalah informasi tagihan WiFi *Sengkuni Net* untuk bulan *${bulan}*.\n\nID Pelanggan: *${idPelanggan}*\nTotal tagihan: *${formatRupiah}*\n\nMohon untuk segera melakukan pembayaran. Terima kasih! 🙏`;
+      const pesan = yth *${nama}*,\n\nIni adalah informasi tagihan WiFi *Sengkuni Net* untuk bulan *${bulan}*.\n\nID Pelanggan: *${idPelanggan}*\nTotal tagihan: *${formatRupiah}*\n\nMohon untuk segera melakukan pembayaran. Terima kasih! 🙏`;
 
       // Buka WhatsApp
       window.open(`https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`, '_blank'); 
