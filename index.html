@@ -9,17 +9,15 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
     .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; border-bottom: 2px solid #25D366; padding-bottom: 10px; }
-    .form-group { margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
     label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; }
-    select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; outline: none; transition: 0.2s; }
-    select:focus { border-color: #25D366; }
+    select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; outline: none; box-sizing: border-box; }
     .item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
     .info { display: flex; flex-direction: column; flex: 1; }
     .nama { font-weight: bold; font-size: 16px; color: #333; }
     .detail { font-size: 13px; color: #777; margin-top: 4px; }
-    .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; margin-left: 10px; }
-    .btn-wa:hover { background-color: #128C7E; transform: scale(1.05); }
-    .btn-wa:active { transform: scale(0.95); }
+    .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    .btn-wa:hover { background-color: #128C7E; }
     #loading { text-align: center; color: #666; font-style: italic; margin-top: 20px; }
   </style>
 </head>
@@ -29,7 +27,7 @@
     <h2>Tagihan Sengkuni Net</h2>
     
     <div class="form-group">
-      <label for="bulanSelect">Pilih Bulan Tagihan:</label>
+      <label>Pilih Bulan Tagihan:</label>
       <select id="bulanSelect">
         <option value="Januari">Januari</option>
         <option value="Februari">Februari</option>
@@ -46,32 +44,33 @@
       </select>
     </div>
 
-    <div id="loading">Sedang mengambil data dari sistem...</div>
+    <div class="form-group">
+      <label>Tanggal Jatuh Tempo:</label>
+      <input type="number" id="tglTempo" value="4" placeholder="Contoh: 4">
+    </div>
+
+    <div id="loading">Memuat data pelanggan...</div>
     <div id="listPelanggan"></div>
   </div>
 
   <script>
-    // URL CSV Google Sheets
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
     Papa.parse(csvUrl, {
       download: true,
       complete: function(results) {
         document.getElementById('loading').style.display = 'none';
-        // Ambil data dan buang header
         const dataPelanggan = results.data.slice(1);
         tampilkanData(dataPelanggan);
       },
       error: function() {
-        document.getElementById('loading').innerHTML = '<span style="color:red;">Gagal memuat data. Periksa koneksi internet atau link CSV.</span>';
+        document.getElementById('loading').innerHTML = '<span style="color:red;">Gagal memuat data CSV.</span>';
       }
     });
 
     function tampilkanData(data) {
       const container = document.getElementById('listPelanggan');
-      
       data.forEach(row => {
-        // Cek apakah kolom nama (index 0) tidak kosong
         if (!row[0] || row[0].trim() === "") return;
 
         const nama = row[0].trim();
@@ -79,20 +78,14 @@
         const idPelanggan = row[2] ? row[2].trim() : "-";
         const tagihanRaw = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
         
-        const formatRupiah = new Intl.NumberFormat('id-ID', { 
-          style: 'currency', 
-          currency: 'IDR', 
-          minimumFractionDigits: 0 
-        }).format(tagihanRaw);
-
         const div = document.createElement('div');
         div.className = 'item';
         div.innerHTML = `
           <div class="info">
             <span class="nama">${nama}</span>
-            <span class="detail">ID: ${idPelanggan} • <b>${formatRupiah}</b></span>
+            <span class="detail">ID: ${idPelanggan} | Rp ${tagihanRaw}</span>
           </div>
-          <button class="btn-wa" onclick="kirimWA('${nama.replace(/'/g, "\\'")}', '${noWa}', '${idPelanggan}', '${tagihanRaw}')">Kirim</button>
+          <button class="btn-wa" onclick="kirimWA('${nama.replace(/'/g, "\\'")}', '${noWa}', '${idPelanggan}', '${tagihanRaw}')">Kirim WA</button>
         `;
         container.appendChild(div);
       });
@@ -100,31 +93,25 @@
 
     function kirimWA(nama, noWa, idPelanggan, tagihan) {
       const bulan = document.getElementById('bulanSelect').value;
+      const tgl = document.getElementById('tglTempo').value;
+      const tahun = new Date().getFullYear();
       
-      // Normalisasi Nomor WhatsApp
       let hp = noWa.replace(/[^0-9]/g, '');
-      if (hp.startsWith('0')) {
-        hp = '62' + hp.substring(1);
-      } else if (!hp.startsWith('62')) {
-        hp = '62' + hp;
-      }
+      if (hp.startsWith('0')) hp = '62' + hp.substring(1);
 
-      const formatRupiah = new Intl.NumberFormat('id-ID', { 
-        style: 'currency', 
-        currency: 'IDR', 
-        minimumFractionDigits: 0 
-      }).format(tagihan);
+      // FORMAT PESAN SESUAI REQUEST
+      const pesan = `sistem chat otomatis tidak perlu di balas❌\n` +
+                    `Pelanggan SENGKUNI NET\n` +
+                    `Yth. *${nama}*\n` +
+                    `Kami sampaikan tagihan layanan internet bulan *${bulan}.${tahun}*\n` +
+                    `Dengan ID Pelanggan *${idPelanggan}*\n` +
+                    `Sebesar *Rp ${tagihan}*\n` +
+                    `Pembayaran paling lambat di tanggal *${tgl}*\n` +
+                    `Pembayaran nunggu tukang narik\n` +
+                    `Admin bendahara : RENDI dan FIRMAN\n` +
+                    `untuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
 
-      // Format Pesan (Gunakan backticks `` untuk template strings)
-      const pesan = `*Yth. Bapak/Ibu ${nama}*,\n\n` +
-                    `Ini adalah informasi tagihan WiFi *Sengkuni Net* untuk bulan *${bulan}*.\n\n` +
-                    `📌 ID Pelanggan: *${idPelanggan}*\n` +
-                    `💰 Total Tagihan: *${formatRupiah}*\n\n` +
-                    `Mohon untuk segera melakukan pembayaran. Jika sudah membayar, abaikan pesan ini. Terima kasih! 🙏`;
-
-      // Buka WhatsApp Web/Apps
-      const waUrl = `https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`;
-      window.open(waUrl, '_blank'); 
+      window.open(`https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`, '_blank'); 
     }
   </script>
 </body>
