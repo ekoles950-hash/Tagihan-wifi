@@ -18,6 +18,7 @@
     .detail { font-size: 13px; color: #777; margin-top: 4px; }
     .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
     .btn-wa:hover { background-color: #128C7E; }
+    .btn-wa:disabled { background-color: #ccc; cursor: not-allowed; }
     #loading { text-align: center; color: #666; font-style: italic; margin-top: 20px; }
   </style>
 </head>
@@ -54,6 +55,9 @@
   </div>
 
   <script>
+    // Token Fonnte milik EKOLESTIYO
+    const TOKEN_FONNTE = "QG6qZ8KwasC2H5zBkDJ3"; 
+
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
     Papa.parse(csvUrl, {
@@ -85,13 +89,13 @@
             <span class="nama">${nama}</span>
             <span class="detail">ID: ${idPelanggan} | Rp ${tagihanRaw}</span>
           </div>
-          <button class="btn-wa" onclick="kirimWA('${nama.replace(/'/g, "\\'")}', '${noWa}', '${idPelanggan}', '${tagihanRaw}')">Kirim WA</button>
+          <button class="btn-wa" onclick="kirimWA(this, '${nama.replace(/'/g, "\\'")}', '${noWa}', '${idPelanggan}', '${tagihanRaw}')">Kirim WA</button>
         `;
         container.appendChild(div);
       });
     }
 
-    function kirimWA(nama, noWa, idPelanggan, tagihan) {
+    async function kirimWA(btn, nama, noWa, idPelanggan, tagihan) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
       const tahun = new Date().getFullYear();
@@ -99,7 +103,6 @@
       let hp = noWa.replace(/[^0-9]/g, '');
       if (hp.startsWith('0')) hp = '62' + hp.substring(1);
 
-      // FORMAT PESAN SESUAI REQUEST
       const pesan = `sistem chat otomatis tidak perlu di balas❌\n` +
                     `Pelanggan SENGKUNI NET\n` +
                     `Yth. *${nama}*\n` +
@@ -111,7 +114,37 @@
                     `Admin bendahara : RENDI dan FIRMAN\n` +
                     `untuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
 
-      window.open(`https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`, '_blank'); 
+      // Visual feedback: Tombol loading
+      const originalText = btn.innerText;
+      btn.innerText = "Mengirim...";
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: { 'Authorization': TOKEN_FONNTE },
+          body: new URLSearchParams({
+            'target': hp,
+            'message': pesan,
+            'countryCode': '62'
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.status) {
+          btn.innerText = "Terkirim ✅";
+          btn.style.backgroundColor = "#128C7E";
+        } else {
+          alert("Gagal: " + result.reason);
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert("Koneksi Error!");
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
     }
   </script>
 </body>
