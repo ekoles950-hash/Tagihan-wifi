@@ -61,15 +61,21 @@
     // --- 1. KONFIGURASI ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
+    
+    // CSV Data Pelanggan
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
-    const csvBendahara = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTBDau5GFAj3S8Gw4uI9N9pQCCW-O_00mnkI80fiFqQc5-Ps4RDHXdxMe_c0yFoGkAgpWgOcMsgXRr/pub?gid=0&single=true&output=csv";
-// Link Bendahara 2 (Rendi - Link Baru)
-const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omItLn1LAdk7SFcS2-5zqFwKRVkby-Tx2bjac2QCIfo9YfCa2nEArS38yjvd9y5jAPc6xqSxY/pub?gid=0&single=true&output=csv";
-    let daftarNomorBendahara = "";
+    
+    // CSV Bendahara 1 (Firman)
+    const csvBendahara1 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTBDau5GFAj3S8Gw4uI9N9pQCCW-O_00mnkI80fiFqQc5-Ps4RDHXdxMe_c0yFoGkAgpWgOcMsgXRr/pub?gid=0&single=true&output=csv";
+    
+    // CSV Bendahara 2 (Rendi)
+    const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omItLn1LAdk7SFcS2-5zqFwKRVkby-Tx2bjac2QCIfo9YfCa2nEArS38yjvd9y5jAPc6xqSxY/pub?gid=0&single=true&output=csv";
 
-    // --- 2. LOAD DATA ---
-    function loadSemuaData() {
-        // Load Pelanggan
+    let daftarNomorSemuaBendahara = "";
+
+    // --- 2. LOAD SEMUA DATA ---
+    function loadSengkuniData() {
+        // Load Data Pelanggan
         Papa.parse(csvPelanggan, {
             download: true,
             complete: function(results) {
@@ -78,21 +84,21 @@ const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omI
             }
         });
 
-        // Load Nomor Bendahara
-        Papa.parse(csvBendahara, {
-            download: true,
-            complete: function(results) {
-                const rows = results.data.slice(1);
-                daftarNomorBendahara = rows
-                    .map(row => row[3] ? row[3].toString().trim() : "")
-                    .filter(num => num !== "")
-                    .join(',');
-                console.log("Bendahara Siap: " + daftarNomorBendahara);
-            }
-        });
+        // Load Data Bendahara 1 & 2 secara bersamaan
+        Promise.all([
+            new Promise(resolve => Papa.parse(csvBendahara1, { download: true, complete: resolve })),
+            new Promise(resolve => Papa.parse(csvBendahara2, { download: true, complete: resolve }))
+        ]).then(results => {
+            const bendahara1 = results[0].data.slice(1).map(row => row[3] ? row[3].toString().trim() : "").filter(n => n);
+            const bendahara2 = results[1].data.slice(1).map(row => row[3] ? row[3].toString().trim() : "").filter(n => n);
+            
+            // Gabungkan nomor dari kedua sheet
+            daftarNomorSemuaBendahara = bendahara1.concat(bendahara2).join(',');
+            console.log("Bendahara Siap: " + daftarNomorSemuaBendahara);
+        }).catch(err => console.error("Gagal memuat data bendahara", err));
     }
 
-    // --- 3. TAMPILKAN LIST ---
+    // --- 3. TAMPILKAN LIST KE LAYAR ---
     function tampilkanData(data) {
         const container = document.getElementById('listPelanggan');
         container.innerHTML = ""; 
@@ -120,11 +126,11 @@ const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omI
         });
     }
 
-    // --- 4. FUNGSI SET LUNAS (KE BENDAHARA) ---
+    // --- 4. FUNGSI SET LUNAS (LAPOR KE SEMUA BENDAHARA) ---
     async function laporLunas(btn, nama, id, tagihan) {
         if(!confirm("Set lunas untuk " + nama + "?")) return;
-        if(!daftarNomorBendahara) {
-            alert("Data bendahara belum siap, silakan refresh.");
+        if(!daftarNomorSemuaBendahara) {
+            alert("Data bendahara belum siap, mohon tunggu sebentar.");
             return;
         }
 
@@ -133,7 +139,7 @@ const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omI
         btn.disabled = true;
 
         try {
-            // Simpan ke Sheets
+            // A. Kirim ke Google Sheets via Apps Script
             await fetch(URL_APPS_SCRIPT, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -141,12 +147,12 @@ const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omI
                 body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': tagihan })
             });
 
-            // Kirim WA Singkat ke Bendahara
+            // B. Kirim WA ke SEMUA Bendahara (Gabungan Sheet 1 & 2)
             await fetch('https://api.fonnte.com/send', {
                 method: 'POST',
                 headers: { 'Authorization': TOKEN_FONNTE },
                 body: new URLSearchParams({
-                    'target': daftarNomorBendahara,
+                    'target': daftarNomorSemuaBendahara,
                     'message': `${nama}: Status: LUNAS ✅`
                 })
             });
@@ -189,7 +195,7 @@ const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omI
     }
 
     // Jalankan Load Data
-    loadSemuaData();
+    loadSengkuniData();
   </script>
 </body> 
 </html>
