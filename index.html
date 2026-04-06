@@ -203,43 +203,7 @@ const csvUrl2 = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrf
         btn.disabled = false;
       }
     }
-  <script>
-  const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km"; 
-  const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
-
-  // ... (Kode Papa.parse kamu yang sudah ada) ...
-
-  // --- TEMPEL DI SINI ---
-  async function laporLunas(btn, nama, id, tagihan) {
-    if(!confirm("Set lunas untuk " + nama + "?")) return;
-    
-    btn.innerText = "...";
-    btn.disabled = true;
-
-    try {
-      // Jalankan kirim ke Google Sheets via Apps Script
-      await fetch(URL_APPS_SCRIPT, {
-        method: 'POST',
-        mode: 'no-cors', // Penting supaya tidak error di browser
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ 
-          'nama': nama, 
-          'id': id, 
-          'nominal': tagihan 
-        })
-      });
-
-      // Jika berhasil, tombol berubah jadi abu-abu dan centang
-      btn.innerText = "Lunas ✅";
-      btn.style.backgroundColor = "#6c757d";
-    } catch (e) {
-      alert("Gagal kirim laporan!");
-      btn.innerText = "Set Lunas";
-      btn.disabled = false;
-    }
-  }
-
-  // ... (Fungsi kirimWA kamu yang sudah ada juga di sini) ...
+  <
 </script>
 </body> 
 </html>
