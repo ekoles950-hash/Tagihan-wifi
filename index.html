@@ -68,7 +68,7 @@
 const csvUrl2 = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    Papa.parse(csvUrl, {
+    Papa.parse(csvUrl, { 
       download: true,
       complete: function(results) {
         document.getElementById('loading').style.display = 'none';
