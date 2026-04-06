@@ -16,9 +16,12 @@
     .info { display: flex; flex-direction: column; flex: 1; }
     .nama { font-weight: bold; font-size: 16px; color: #333; }
     .detail { font-size: 13px; color: #777; margin-top: 4px; }
-    .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    .actions { display: flex; gap: 5px; }
+    .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
+    .btn-lunas { background-color: #007bff; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
     .btn-wa:hover { background-color: #128C7E; }
-    .btn-wa:disabled { background-color: #ccc; cursor: not-allowed; }
+    .btn-lunas:hover { background-color: #0056b3; }
+    .btn-wa:disabled, .btn-lunas:disabled { background-color: #ccc; cursor: not-allowed; }
     #loading { text-align: center; color: #666; font-style: italic; margin-top: 20px; }
   </style>
 </head>
@@ -32,8 +35,8 @@
       <select id="bulanSelect">
         <option value="Januari">Januari</option>
         <option value="Februari">Februari</option>
-        <option value="Maret" selected>Maret</option>
-        <option value="April">April</option>
+        <option value="Maret">Maret</option>
+        <option value="April" selected>April</option>
         <option value="Mei">Mei</option>
         <option value="Juni">Juni</option>
         <option value="Juli">Juli</option>
@@ -55,8 +58,12 @@
   </div>
 
   <script>
-    // Token Fonnte milik EKOLESTIYO
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km"; 
+    // URL Apps Script kamu dari screenshot tadi
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
+    // Nomor HP Bendahara (Ganti dengan nomor Rendi/Firman yang benar, awali 62)
+    const NO_BENDAHARA_1 = "628xxx"; 
+    const NO_BENDAHARA_2 = "628xxx";
 
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
@@ -89,10 +96,61 @@
             <span class="nama">${nama}</span>
             <span class="detail">ID: ${idPelanggan} | Rp ${tagihanRaw}</span>
           </div>
-          <button class="btn-wa" onclick="kirimWA(this, '${nama.replace(/'/g, "\\'")}', '${noWa}', '${idPelanggan}', '${tagihanRaw}')">Kirim WA</button>
+          <div class="actions">
+            <button class="btn-wa" onclick="kirimWA(this, '${nama.replace(/'/g, "\\'")}', '${noWa}', '${idPelanggan}', '${tagihanRaw}')">WA</button>
+            <button class="btn-lunas" onclick="laporLunas(this, '${nama.replace(/'/g, "\\'")}', '${idPelanggan}', '${tagihanRaw}')">Set Lunas</button>
+          </div>
         `;
         container.appendChild(div);
       });
+    }
+
+    // FUNGSI BARU: LAPOR KE BENDAHARA & APPS SCRIPT
+    async function laporLunas(btn, nama, idPelanggan, tagihan) {
+      if(!confirm("Konfirmasi pembayaran lunas untuk " + nama + "?")) return;
+
+      const originalText = btn.innerText;
+      btn.innerText = "Proses...";
+      btn.disabled = true;
+
+      try {
+        // 1. Kirim ke Google Sheets (via Apps Script)
+        await fetch(URL_APPS_SCRIPT, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({
+            nama: nama,
+            id: idPelanggan,
+            nominal: tagihan,
+            tanggal: new Date().toLocaleString()
+          })
+        });
+
+        // 2. Kirim Notifikasi WA ke Bendahara via Fonnte
+        const pesanBendahara = `*LAPORAN PEMBAYARAN LUNAS*\n\n` +
+                               `Nama: *${nama}*\n` +
+                               `ID: *${idPelanggan}*\n` +
+                               `Nominal: *Rp ${tagihan}*\n` +
+                               `Status: *LUNAS*\n` +
+                               `Waktu: ${new Date().toLocaleString()}\n\n` +
+                               `Data otomatis masuk ke Google Sheets.`;
+
+        await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: { 'Authorization': TOKEN_FONNTE },
+          body: new URLSearchParams({
+            'target': `${NO_BENDAHARA_1},${NO_BENDAHARA_2}`, // Kirim ke kedua bendahara
+            'message': pesanBendahara
+          })
+        });
+
+        btn.innerText = "LUNAS ✅";
+        btn.style.backgroundColor = "#6c757d";
+      } catch (err) {
+        alert("Gagal lapor lunas!");
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
     }
 
     async function kirimWA(btn, nama, noWa, idPelanggan, tagihan) {
@@ -114,9 +172,8 @@
                     `Admin bendahara : RENDI dan FIRMAN\n` +
                     `untuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
 
-      // Visual feedback: Tombol loading
       const originalText = btn.innerText;
-      btn.innerText = "Mengirim...";
+      btn.innerText = "...";
       btn.disabled = true;
 
       try {
@@ -131,9 +188,8 @@
         });
 
         const result = await response.json();
-
         if (result.status) {
-          btn.innerText = "Terkirim ✅";
+          btn.innerText = "OK ✅";
           btn.style.backgroundColor = "#128C7E";
         } else {
           alert("Gagal: " + result.reason);
