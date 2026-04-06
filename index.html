@@ -227,7 +227,137 @@ const csvUrl2 = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrf
     alert("Gagal koneksi!");
     btn.innerText = "Set Lunas";
     btn.disabled = false;
-  }
+  }<script>
+// --- 1. KONFIGURASI LINK ---
+const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
+
+// Link CSV Pelanggan (Data Induk)
+const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
+
+// Link CSV Bendahara (Link yang baru kamu kasih)
+const csvBendahara = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTBDau5GFAj3S8Gw4uI9N9pQCCW-O_00mnkI80fiFqQc5-Ps4RDHXdxMe_c0yFoGkAgpWgOcMsgXRr/pub?gid=0&single=true&output=csv";
+
+let daftarNomorBendahara = ""; // Akan terisi otomatis dari CSV Bendahara
+
+// --- 2. FUNGSI AMBIL DATA (LOADER) ---
+function loadSemuaData() {
+    // Ambil Data Pelanggan untuk List di HP
+    Papa.parse(csvPelanggan, {
+        download: true,
+        complete: function(results) {
+            document.getElementById('loading').style.display = 'none';
+            tampilkanData(results.data.slice(1)); // Lewati header
+        }
+    });
+
+    // Ambil Data Bendahara untuk Tujuan Kirim WA
+    Papa.parse(csvBendahara, {
+        download: true,
+        complete: function(results) {
+            const barisBendahara = results.data.slice(1);
+            // Mengambil Kolom D (index 3) yaitu nomor WA
+            daftarNomorBendahara = barisBendahara
+                .map(row => row[3] ? row[3].toString().trim() : "")
+                .filter(num => num !== "")
+                .join(',');
+            console.log("Nomor Bendahara Aktif: " + daftarNomorBendahara);
+        }
+    });
+}
+
+// --- 3. FUNGSI TAMPILKAN LIST KE LAYAR ---
+function tampilkanData(data) {
+    const container = document.getElementById('listPelanggan');
+    container.innerHTML = ""; 
+
+    data.forEach(row => {
+        if (!row[0]) return;
+        const nama = row[0].trim();
+        const noWaPelanggan = row[1] ? row[1].toString().trim() : "";
+        const id = row[2] ? row[2].trim() : "-";
+        const tagihan = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
+        
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+            <div class="info">
+                <span class="nama">${nama}</span>
+                <span class="detail">ID: ${id} | Rp ${tagihan}</span>
+            </div>
+            <div class="actions">
+                <button class="btn-wa" onclick="kirimWA(this, '${nama}', '${noWaPelanggan}', '${id}', '${tagihan}')">WA</button>
+                <button class="btn-lunas" onclick="laporLunas(this, '${nama}', '${id}', '${tagihan}')">Set Lunas</button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// --- 4. FUNGSI TOMBOL SET LUNAS (PROJECT BARU) ---
+async function laporLunas(btn, nama, id, tagihan) {
+    if(!confirm("Konfirmasi Lunas untuk " + nama + "?")) return;
+    if(!daftarNomorBendahara) {
+        alert("Data bendahara belum termuat! Tunggu sebentar atau refresh.");
+        return;
+    }
+
+    const originalText = btn.innerText;
+    btn.innerText = "...";
+    btn.disabled = true;
+
+    try {
+        // A. Catat ke Google Sheets via Apps Script
+        await fetch(URL_APPS_SCRIPT, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': tagihan })
+        });
+
+        // B. Kirim Pesan Singkat ke WA Bendahara (Firman/Rendi)
+        await fetch('https://api.fonnte.com/send', {
+            method: 'POST',
+            headers: { 'Authorization': TOKEN_FONNTE },
+            body: new URLSearchParams({
+                'target': daftarNomorBendahara,
+                'message': `${nama}: Status: LUNAS ✅`
+            })
+        });
+
+        btn.innerText = "LUNAS ✅";
+        btn.style.backgroundColor = "#6c757d";
+    } catch (e) {
+        alert("Gagal lapor!");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+// --- 5. FUNGSI KIRIM TAGIHAN (PROJECT LAMA) ---
+async function kirimWA(btn, nama, noWa, id, tagihan) {
+    const bulan = document.getElementById('bulanSelect').value;
+    const tgl = document.getElementById('tglTempo').value;
+    let hp = noWa.replace(/[^0-9]/g, '');
+    if (hp.startsWith('0')) hp = '62' + hp.substring(1);
+
+    const pesan = `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${id}*\nTotal: *Rp ${tagihan}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
+
+    btn.innerText = "...";
+    try {
+        const res = await fetch('https://api.fonnte.com/send', {
+            method: 'POST',
+            headers: { 'Authorization': TOKEN_FONNTE },
+            body: new URLSearchParams({ 'target': hp, 'message': pesan })
+        });
+        const hasil = await res.json();
+        btn.innerText = hasil.status ? "OK ✅" : "Gagal";
+    } catch (e) { btn.innerText = "Error"; }
+}
+
+// Jalankan loader saat web dibuka
+loadSemuaData();
+</script>
 }
     }
   
