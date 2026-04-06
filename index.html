@@ -201,7 +201,34 @@ const csvUrl2 = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrf
         alert("Koneksi Error!");
         btn.innerText = originalText;
         btn.disabled = false;
-      }
+      }async function laporLunas(btn, nama, id, tagihan) {
+  if(!confirm("Set lunas untuk " + nama + "?")) return;
+  
+  btn.innerText = "...";
+  btn.disabled = true;
+
+  try {
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
+
+    await fetch(URL_APPS_SCRIPT, {
+      method: 'POST',
+      mode: 'no-cors', // Penting untuk Google Apps Script
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        'nama': nama,
+        'id': id,
+        'nominal': tagihan
+      })
+    });
+
+    btn.innerText = "Lunas ✅";
+    btn.style.backgroundColor = "#6c757d";
+  } catch (e) {
+    alert("Gagal koneksi!");
+    btn.innerText = "Set Lunas";
+    btn.disabled = false;
+  }
+}
     }
   
 </script>
