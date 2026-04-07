@@ -21,7 +21,6 @@
     .btn-lunas { background-color: #007bff; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
     .btn-wa:hover { background-color: #128C7E; }
     .btn-lunas:hover { background-color: #0056b3; }
-    .btn-wa:disabled, .btn-lunas:disabled { background-color: #ccc; cursor: not-allowed; }
     #loading { text-align: center; color: #666; font-style: italic; margin-top: 20px; }
   </style>
 </head>
@@ -50,10 +49,10 @@
 
     <div class="form-group">
       <label>Tanggal Jatuh Tempo:</label>
-      <input type="number" id="tglTempo" value="4" placeholder="Contoh: 4">
+      <input type="number" id="tglTempo" value="4">
     </div>
 
-    <div id="loading">Memuat data pelanggan...</div>
+    <div id="loading">Memuat data...</div>
     <div id="listPelanggan"></div>
   </div>
 
@@ -62,97 +61,92 @@
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     
-    // CSV Data Pelanggan
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
-    
-    // CSV Bendahara 1 (Firman)
     const csvBendahara1 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQTBDau5GFAj3S8Gw4uI9N9pQCCW-O_00mnkI80fiFqQc5-Ps4RDHXdxMe_c0yFoGkAgpWgOcMsgXRr/pub?gid=0&single=true&output=csv";
-    
-    // CSV Bendahara 2 (Rendi)
     const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omItLn1LAdk7SFcS2-5zqFwKRVkby-Tx2bjac2QCIfo9YfCa2nEArS38yjvd9y5jAPc6xqSxY/pub?gid=0&single=true&output=csv";
 
-    let daftarNomorSemuaBendahara = "";
+    let noFirman = "";
+    let noRendi = "";
 
-    // --- 2. LOAD SEMUA DATA ---
-    function loadSengkuniData() {
-        // Load Data Pelanggan
+    // --- 2. LOAD DATA ---
+    function loadData() {
+        // Ambil data pelanggan
         Papa.parse(csvPelanggan, {
             download: true,
-            complete: function(results) {
+            complete: (results) => {
                 document.getElementById('loading').style.display = 'none';
                 tampilkanData(results.data.slice(1));
             }
         });
 
-        // Load Data Bendahara 1 & 2 secara bersamaan
-        Promise.all([
-            new Promise(resolve => Papa.parse(csvBendahara1, { download: true, complete: resolve })),
-            new Promise(resolve => Papa.parse(csvBendahara2, { download: true, complete: resolve }))
-        ]).then(results => {
-            const bendahara1 = results[0].data.slice(1).map(row => row[3] ? row[3].toString().trim() : "").filter(n => n);
-            const bendahara2 = results[1].data.slice(1).map(row => row[3] ? row[3].toString().trim() : "").filter(n => n);
-            
-            // Gabungkan nomor dari kedua sheet
-            daftarNomorSemuaBendahara = bendahara1.concat(bendahara2).join(',');
-            console.log("Bendahara Siap: " + daftarNomorSemuaBendahara);
-        }).catch(err => console.error("Gagal memuat data bendahara", err));
+        // Ambil Nomor Firman (CSV 1) - Kolom D (index 3)
+        Papa.parse(csvBendahara1, { download: true, complete: (r) => { noFirman = r.data[1][3]; } });
+        // Ambil Nomor Rendi (CSV 2) - Kolom D (index 3)
+        Papa.parse(csvBendahara2, { download: true, complete: (r) => { noRendi = r.data[1][3]; } });
     }
 
-    // --- 3. TAMPILKAN LIST KE LAYAR ---
+    // --- 3. TAMPILKAN DATA ---
     function tampilkanData(data) {
         const container = document.getElementById('listPelanggan');
         container.innerHTML = ""; 
-
         data.forEach(row => {
             if (!row[0]) return;
             const nama = row[0].trim();
-            const noWaPel = row[1] ? row[1].toString().trim() : "";
-            const idPel = row[2] ? row[2].trim() : "-";
-            const tagihan = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
-            
+            const noPel = row[1] ? row[1] : "";
+            const id = row[2] ? row[2] : "-";
+            const tagihan = row[3] ? row[3] : "0";
+            // AMBIL INFO BENDAHARA DI KOLOM E (index 4)
+            const bendaharaTugas = row[4] ? row[4].toLowerCase().trim() : "";
+
             const div = document.createElement('div');
             div.className = 'item';
             div.innerHTML = `
                 <div class="info">
                     <span class="nama">${nama}</span>
-                    <span class="detail">ID: ${idPel} | Rp ${tagihan}</span>
+                    <span class="detail">ID: ${id} | Rp ${tagihan}</span>
                 </div>
                 <div class="actions">
-                    <button class="btn-wa" onclick="kirimWA(this, '${nama.replace(/'/g, "\\'")}', '${noWaPel}', '${idPel}', '${tagihan}')">WA</button>
-                    <button class="btn-lunas" onclick="laporLunas(this, '${nama.replace(/'/g, "\\'")}', '${idPel}', '${tagihan}')">Set Lunas</button>
+                    <button class="btn-wa" onclick="kirimWA(this, '${nama}', '${noPel}', '${id}', '${tagihan}')">WA</button>
+                    <button class="btn-lunas" onclick="laporLunas(this, '${nama}', '${id}', '${tagihan}', '${bendaharaTugas}')">Set Lunas</button>
                 </div>
             `;
             container.appendChild(div);
         });
     }
 
-    // --- 4. FUNGSI SET LUNAS (LAPOR KE SEMUA BENDAHARA) ---
-    async function laporLunas(btn, nama, id, tagihan) {
+    // --- 4. FUNGSI LAPOR LUNAS (Hanya ke Bendahara yang Bertugas) ---
+    async function laporLunas(btn, nama, id, tagihan, petugas) {
         if(!confirm("Set lunas untuk " + nama + "?")) return;
-        if(!daftarNomorSemuaBendahara) {
-            alert("Data bendahara belum siap, mohon tunggu sebentar.");
-            return;
+
+        // PILIH NOMOR TUJUAN BERDASARKAN KOLOM E
+        let targetWA = "";
+        if (petugas === "firman") {
+            targetWA = noFirman;
+        } else if (petugas === "rendi") {
+            targetWA = noRendi;
+        } else {
+            // Jika kolom E kosong, kirim ke dua-duanya biar aman
+            targetWA = noFirman + "," + noRendi;
         }
 
-        const originalText = btn.innerText;
+        if(!targetWA) { alert("Nomor bendahara belum siap!"); return; }
+
         btn.innerText = "...";
         btn.disabled = true;
 
         try {
-            // A. Kirim ke Google Sheets via Apps Script
+            // Simpan ke Google Sheets
             await fetch(URL_APPS_SCRIPT, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': tagihan })
+                method: 'POST', mode: 'no-cors',
+                body: new URLSearchParams({'nama': nama, 'id': id, 'nominal': tagihan})
             });
 
-            // B. Kirim WA ke SEMUA Bendahara (Gabungan Sheet 1 & 2)
+            // Kirim WA hanya ke Bendahara yang sesuai di Kolom E
             await fetch('https://api.fonnte.com/send', {
                 method: 'POST',
                 headers: { 'Authorization': TOKEN_FONNTE },
                 body: new URLSearchParams({
-                    'target': daftarNomorSemuaBendahara,
+                    'target': targetWA,
                     'message': `${nama}: Status: LUNAS ✅`
                 })
             });
@@ -160,42 +154,29 @@
             btn.innerText = "LUNAS ✅";
             btn.style.backgroundColor = "#6c757d";
         } catch (e) {
-            alert("Gagal lapor!");
-            btn.innerText = originalText;
+            alert("Gagal!");
             btn.disabled = false;
         }
     }
 
-    // --- 5. FUNGSI KIRIM TAGIHAN (KE PELANGGAN) ---
+    // --- 5. FUNGSI KIRIM TAGIHAN KE PELANGGAN ---
     async function kirimWA(btn, nama, noWa, id, tagihan) {
         const bulan = document.getElementById('bulanSelect').value;
         const tgl = document.getElementById('tglTempo').value;
         let hp = noWa.replace(/[^0-9]/g, '');
         if (hp.startsWith('0')) hp = '62' + hp.substring(1);
-
-        const pesan = `sistem chat otomatis tidak perlu di balas❌\n` +
-                      `Pelanggan SENGKUNI NET\n` +
-                      `Yth. *${nama}*\n` +
-                      `Tagihan internet bulan *${bulan}.${new Date().getFullYear()}*\n` +
-                      `ID: *${id}*\n` +
-                      `Total: *Rp ${tagihan}*\n` +
-                      `Tempo: tgl *${tgl}*\n` +
-                      `Admin: RENDI & FIRMAN`;
-
+        const pesan = `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${id}*\nTotal: *Rp ${tagihan}*\ntempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
         btn.innerText = "...";
         try {
-            const res = await fetch('https://api.fonnte.com/send', {
-                method: 'POST',
-                headers: { 'Authorization': TOKEN_FONNTE },
+            await fetch('https://api.fonnte.com/send', {
+                method: 'POST', headers: { 'Authorization': TOKEN_FONNTE },
                 body: new URLSearchParams({ 'target': hp, 'message': pesan })
             });
-            const hasil = await res.json();
-            btn.innerText = hasil.status ? "OK ✅" : "Gagal";
+            btn.innerText = "OK ✅";
         } catch (e) { btn.innerText = "Error"; }
     }
 
-    // Jalankan Load Data
-    loadSengkuniData();
+    loadData();
   </script>
 </body> 
 </html>
