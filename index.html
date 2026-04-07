@@ -58,16 +58,16 @@
   </div>
 
   <script>
-    // --- 1. KONFIGURASI ---
+    // --- 1. KONFIGURASI UTAMA ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Nomor WA Bendahara Langsung (Biar Gak Ribet Pakai CSV Bendahara)
-    const noFirman = "6282243047166"; 
-    const noRendi = "6285600409940"; 
+    // Nomor WA Bendahara Langsung (Tetap/Statik)
+    const noWaFirman = "6282243047166"; 
+    const noWaRendi = "6285600409940"; 
 
-    // --- 2. LOAD DATA ---
+    // --- 2. LOAD DATA PELANGGAN ---
     function loadSemuaData() {
         Papa.parse(csvPelanggan, {
             download: true,
@@ -76,7 +76,7 @@
                 tampilkanData(results.data.slice(1));
             },
             error: function() {
-                document.getElementById('loading').innerHTML = '<span style="color:red;">Gagal memuat data CSV pelanggan.</span>';
+                document.getElementById('loading').innerHTML = '<span style="color:red;">Gagal memuat data CSV.</span>';
             }
         });
     }
@@ -94,7 +94,7 @@
             const tagihan = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
             
             // Kolom E (index 4) berisi "firman" atau "rendi"
-            const petugas = row[4] ? row[4].toLowerCase().trim() : "";
+            const petugasBendahara = row[4] ? row[4].toLowerCase().trim() : "";
 
             const div = document.createElement('div');
             div.className = 'item';
@@ -105,26 +105,26 @@
                 </div>
                 <div class="actions">
                     <button class="btn-wa" onclick="kirimWA(this, '${nama.replace(/'/g, "\\'")}', '${noWaPel}', '${idPel}', '${tagihan}')">WA</button>
-                    <button class="btn-lunas" onclick="laporLunas(this, '${nama.replace(/'/g, "\\'")}', '${idPel}', '${tagihan}', '${petugas}')">Set Lunas</button>
+                    <button class="btn-lunas" onclick="laporLunas(this, '${nama.replace(/'/g, "\\'")}', '${idPel}', '${tagihan}', '${petugasBendahara}')">Set Lunas</button>
                 </div>
             `;
             container.appendChild(div);
         });
     }
 
-    // --- 4. FUNGSI SET LUNAS (KIRIM BERDASARKAN PETUGAS) ---
+    // --- 4. FUNGSI SET LUNAS (KIRIM HANYA KE BENDAHARA YANG BERTUGAS) ---
     async function laporLunas(btn, nama, id, tagihan, petugas) {
         if(!confirm("Konfirmasi Lunas untuk " + nama + "?")) return;
 
         // PILIH NOMOR TUJUAN BERDASARKAN ISI KOLOM E
         let targetWA = "";
         if (petugas === "firman") {
-            targetWA = noFirman;
+            targetWA = noWaFirman;
         } else if (petugas === "rendi") {
-            targetWA = noRendi;
+            targetWA = noWaRendi;
         } else {
             // Backup jika kolom E kosong: kirim ke dua-duanya agar laporan tidak hilang
-            targetWA = noFirman + "," + noRendi;
+            targetWA = noWaFirman + "," + noWaRendi;
         }
 
         const originalText = btn.innerText;
@@ -152,8 +152,9 @@
 
             btn.innerText = "LUNAS ✅";
             btn.style.backgroundColor = "#6c757d";
+            btn.onclick = null; // Biar nggak bisa diklik dua kali
         } catch (e) {
-            alert("Gagal lapor!");
+            alert("Gagal lapor lunas!");
             btn.innerText = originalText;
             btn.disabled = false;
         }
@@ -186,11 +187,10 @@
             btn.innerText = hasil.status ? "OK ✅" : "Gagal";
         } catch (e) { 
             btn.innerText = "Error"; 
-            alert("Koneksi ke Fonnte bermasalah!");
         }
     }
 
-    // Jalankan Load Data
+    // Jalankan Load Data saat halaman dibuka
     loadSemuaData();
   </script>
 </body> 
