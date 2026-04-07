@@ -61,40 +61,23 @@
     // --- 1. KONFIGURASI ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
-    
-    // CSV Utama (Pelanggan)
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
-    
-    // CSV Bendahara 1 (Firman)
-    const csvBendahara1 = "";
-    
-    // CSV Bendahara 2 (Rendi)
-    const csvBendahara2 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNyj1omItLn1LAdk7SFcS2-5zqFwKRVkby-Tx2bjac2QCIfo9YfCa2nEArS38yjvd9y5jAPc6xqSxY/pub?gid=0&single=true&output=csv";
 
-    let noFirman = "";
-    let noRendi = "";
+    // Nomor WA Bendahara Langsung (Biar Gak Ribet Pakai CSV Bendahara)
+    const noFirman = "6282243047166"; 
+    const noRendi = "6285600409940"; 
 
     // --- 2. LOAD DATA ---
     function loadSemuaData() {
-        // Load Data Pelanggan
         Papa.parse(csvPelanggan, {
             download: true,
             complete: function(results) {
                 document.getElementById('loading').style.display = 'none';
                 tampilkanData(results.data.slice(1));
+            },
+            error: function() {
+                document.getElementById('loading').innerHTML = '<span style="color:red;">Gagal memuat data CSV pelanggan.</span>';
             }
-        });
-
-        // Load Nomor Firman (Ambil baris 2, Kolom D)
-        Papa.parse(csvBendahara1, { 
-            download: true, 
-            complete: (r) => { if(r.data[1]) noFirman = r.data[1][3]; } 
-        });
-
-        // Load Nomor Rendi (Ambil baris 2, Kolom D)
-        Papa.parse(csvBendahara2, { 
-            download: true, 
-            complete: (r) => { if(r.data[1]) noRendi = r.data[1][3]; } 
         });
     }
 
@@ -133,20 +116,15 @@
     async function laporLunas(btn, nama, id, tagihan, petugas) {
         if(!confirm("Konfirmasi Lunas untuk " + nama + "?")) return;
 
-        // Tentukan target nomor WA berdasarkan isi kolom E
+        // PILIH NOMOR TUJUAN BERDASARKAN ISI KOLOM E
         let targetWA = "";
         if (petugas === "firman") {
             targetWA = noFirman;
         } else if (petugas === "rendi") {
             targetWA = noRendi;
         } else {
-            // Backup jika kolom E kosong: kirim ke dua-duanya
+            // Backup jika kolom E kosong: kirim ke dua-duanya agar laporan tidak hilang
             targetWA = noFirman + "," + noRendi;
-        }
-
-        if(!targetWA) {
-            alert("Nomor bendahara belum termuat! Silakan refresh.");
-            return;
         }
 
         const originalText = btn.innerText;
@@ -162,7 +140,7 @@
                 body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': tagihan })
             });
 
-            // B. Kirim Notifikasi WA ke Bendahara yang bersangkutan
+            // B. Kirim Notifikasi WA ke Bendahara yang bersangkutan via Fonnte
             await fetch('https://api.fonnte.com/send', {
                 method: 'POST',
                 headers: { 'Authorization': TOKEN_FONNTE },
@@ -206,7 +184,10 @@
             });
             const hasil = await res.json();
             btn.innerText = hasil.status ? "OK ✅" : "Gagal";
-        } catch (e) { btn.innerText = "Error"; }
+        } catch (e) { 
+            btn.innerText = "Error"; 
+            alert("Koneksi ke Fonnte bermasalah!");
+        }
     }
 
     // Jalankan Load Data
