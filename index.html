@@ -9,19 +9,27 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
     .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #1a1a1a; margin-bottom: 20px; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
+    
+    .summary-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #c8e6c9; text-align: center; }
+    .summary-box span { display: block; font-size: 14px; color: #2e7d32; font-weight: bold; }
+    .summary-box #totalDisplay { font-size: 24px; color: #1b5e20; }
+
     .form-group { margin-bottom: 15px; }
     label { font-weight: bold; display: block; margin-bottom: 5px; color: #444; font-size: 14px; }
     select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; outline: none; box-sizing: border-box; background: #fff; }
+    
     .item { border-bottom: 1px solid #eee; padding: 15px 0; }
     .info { margin-bottom: 12px; }
     .nama { font-weight: bold; font-size: 17px; color: #222; text-transform: capitalize; }
     .detail { font-size: 14px; color: #666; margin-top: 3px; }
+    
     .actions { display: flex; gap: 8px; }
-    .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; flex: 1; color: white; transition: 0.2s; text-align: center; }
+    .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; flex: 1; color: white; transition: 0.2s; text-align: center; outline: none; }
     .btn-wa { background-color: #25D366; }
     .btn-lunas { background-color: #007bff; }
     .btn-lapor { background-color: #f39c12; }
     .btn:active { transform: scale(0.92); opacity: 0.9; }
+    
     #loading { text-align: center; color: #888; font-style: italic; margin-top: 20px; }
   </style>
 </head>
@@ -30,6 +38,11 @@
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
     
+    <div class="summary-box">
+      <span>TOTAL GABUNGAN HARI INI:</span>
+      <strong id="totalDisplay">Rp 0</strong>
+    </div>
+
     <div class="form-group">
       <label>Pilih Bulan Tagihan:</label>
       <select id="bulanSelect">
@@ -37,8 +50,8 @@
         <option value="Februari">Februari</option>
         <option value="Maret">Maret</option>
         <option value="April">April</option>
-        <option value="Mei">Mei</option>
-        <option value="Juni" selected>Juni</option>
+        <option value="Mei" selected>Mei</option>
+        <option value="Juni">Juni</option>
         <option value="Juli">Juli</option>
         <option value="Agustus">Agustus</option>
         <option value="September">September</option>
@@ -58,9 +71,12 @@
   </div>
 
   <script>
-    // Konfigurasi Telegram dari User
+    // Konfigurasi Telegram
     const TELEGRAM_TOKEN = "8669839359:AAGPkRpOiLlYoBc3t4IgxcAGSgKFC8v1SwU";
     const TELEGRAM_CHAT_ID = "7933777456";
+
+    // Variabel Penjumlah
+    let totalGabungan = 0;
 
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
@@ -69,9 +85,6 @@
       complete: function(results) {
         document.getElementById('loading').style.display = 'none';
         tampilkanData(results.data.slice(1));
-      },
-      error: function() {
-        document.getElementById('loading').innerHTML = '<span style="color:red;">Gagal memuat data Spreadsheet.</span>';
       }
     });
 
@@ -95,7 +108,7 @@
           <div class="actions">
             <button class="btn btn-wa" onclick="kirimWA('${nama}', '${noWa}', '${idPel}', '${harga}')">WA</button>
             <button class="btn btn-lunas" onclick="markLunas(this)">Set Lunas</button>
-            <button class="btn btn-lapor" onclick="laporTelegram('${nama}', '${harga}')">Lapor</button>
+            <button class="btn btn-lapor" onclick="laporTelegram('${nama}', '${harga}', this)">Lapor</button>
           </div>
         `;
         container.appendChild(div);
@@ -120,29 +133,35 @@
       window.open(`https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`, '_blank');
     }
 
-    function laporTelegram(nama, harga) {
+    function laporTelegram(nama, harga, btn) {
       const bulan = document.getElementById('bulanSelect').value;
+      const nominal = parseInt(harga);
+      
+      // Update Total Gabungan
+      totalGabungan += nominal;
+      document.getElementById('totalDisplay').innerText = "Rp " + totalGabungan.toLocaleString('id-ID');
+
       const waktu = new Date().toLocaleString('id-ID');
       
       const text = `💰 *LAPORAN MASUK*\n` +
                    `---------------------------\n` +
                    `👤 Nama : *${nama}*\n` +
                    `📅 Bulan : ${bulan}\n` +
-                   `💵 Jumlah : *Rp ${parseInt(harga).toLocaleString('id-ID')}*\n` +
-                   `⏰ Waktu : ${waktu}\n` +
-                   `---------------------------`;
+                   `💵 Masuk : *Rp ${nominal.toLocaleString('id-ID')}*\n` +
+                   `📈 *TOTAL GABUNGAN : Rp ${totalGabungan.toLocaleString('id-ID')}*\n` +
+                   `---------------------------\n` +
+                   `⏰ ${waktu}`;
 
       const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(text)}&parse_mode=Markdown`;
 
-      fetch(url)
-        .then(res => {
-          if(res.ok) {
-            alert('Berhasil Lapor ke Telegram!');
-          } else {
-            alert('Gagal Lapor! Periksa koneksi atau Bot.');
-          }
-        });
+      fetch(url).then(res => {
+        if(res.ok) {
+          btn.style.backgroundColor = '#7f8c8d';
+          btn.innerText = 'Dilaporkan ✓';
+          btn.disabled = true;
+        }
+      });
     }
   </script>
 </body>
-</html> 
+</html>
