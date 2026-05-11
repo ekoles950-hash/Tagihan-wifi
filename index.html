@@ -6,23 +6,23 @@
   <title>Tagihan Sengkuni Net</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
-    .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; border-bottom: 2px solid #25D366; padding-bottom: 10px; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
+    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #1a1a1a; margin-bottom: 20px; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
     .form-group { margin-bottom: 15px; }
-    label { font-weight: bold; display: block; margin-bottom: 8px; color: #444; }
-    select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; outline: none; box-sizing: border-box; }
-    .item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
-    .info { display: flex; flex-direction: column; flex: 1; }
-    .nama { font-weight: bold; font-size: 16px; color: #333; }
-    .detail { font-size: 13px; color: #777; margin-top: 4px; }
-    .actions { display: flex; gap: 5px; }
-    .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
-    .btn-lunas { background-color: #007bff; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
-    .btn-wa:hover { background-color: #128C7E; }
-    .btn-lunas:hover { background-color: #0056b3; }
-    .btn-wa:disabled, .btn-lunas:disabled { background-color: #ccc; cursor: not-allowed; }
-    #loading { text-align: center; color: #666; font-style: italic; margin-top: 20px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #444; font-size: 14px; }
+    select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; outline: none; box-sizing: border-box; background: #fff; }
+    .item { border-bottom: 1px solid #eee; padding: 15px 0; }
+    .info { margin-bottom: 12px; }
+    .nama { font-weight: bold; font-size: 17px; color: #222; text-transform: capitalize; }
+    .detail { font-size: 14px; color: #666; margin-top: 3px; }
+    .actions { display: flex; gap: 8px; }
+    .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; flex: 1; color: white; transition: 0.2s; text-align: center; }
+    .btn-wa { background-color: #25D366; }
+    .btn-lunas { background-color: #007bff; }
+    .btn-lapor { background-color: #f39c12; }
+    .btn:active { transform: scale(0.92); opacity: 0.9; }
+    #loading { text-align: center; color: #888; font-style: italic; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -36,9 +36,9 @@
         <option value="Januari">Januari</option>
         <option value="Februari">Februari</option>
         <option value="Maret">Maret</option>
-        <option value="April" selected>April</option>
+        <option value="April">April</option>
         <option value="Mei">Mei</option>
-        <option value="Juni">Juni</option>
+        <option value="Juni" selected>Juni</option>
         <option value="Juli">Juli</option>
         <option value="Agustus">Agustus</option>
         <option value="September">September</option>
@@ -53,139 +53,96 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
-    <div id="loading">Memuat data Sengkuni Net...</div>
+    <div id="loading">Menghubungkan ke sistem...</div>
     <div id="listPelanggan"></div>
   </div>
 
   <script>
-    // --- 1. KONFIGURASI UTAMA ---
-    const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
-    
-    // GANTI DENGAN URL APPS SCRIPT MASING-MASING
-    const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
-    const SCRIPT_RENDI = "https://script.google.com/macros/s/LINK_SCRIPT_RENDI_DI_SINI"; 
+    // Konfigurasi Telegram dari User
+    const TELEGRAM_TOKEN = "8669839359:AAGPkRpOiLlYoBc3t4IgxcAGSgKFC8v1SwU";
+    const TELEGRAM_CHAT_ID = "7933777456";
 
-    // Link CSV Data Pelanggan Utama
-    const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Nomor WA Bendahara
-    const noWaFirman = "6282115794996"; 
-    const noWaRendi = "6285600409940"; 
+    Papa.parse(csvUrl, {
+      download: true,
+      complete: function(results) {
+        document.getElementById('loading').style.display = 'none';
+        tampilkanData(results.data.slice(1));
+      },
+      error: function() {
+        document.getElementById('loading').innerHTML = '<span style="color:red;">Gagal memuat data Spreadsheet.</span>';
+      }
+    });
 
-    // --- 2. LOAD DATA ---
-    function loadSemuaData() {
-        Papa.parse(csvPelanggan, {
-            download: true,
-            complete: function(results) {
-                document.getElementById('loading').style.display = 'none';
-                tampilkanData(results.data.slice(1));
-            }
-        });
-    }
-
-    // --- 3. TAMPILKAN DATA ---
     function tampilkanData(data) {
-        const container = document.getElementById('listPelanggan');
-        container.innerHTML = ""; 
+      const container = document.getElementById('listPelanggan');
+      data.forEach(row => {
+        if (!row[0] || row[0].trim() === "") return;
+        
+        const nama = row[0].trim();
+        const noWa = row[1] ? row[1].toString().trim() : "";
+        const idPel = row[2] ? row[2].trim() : "-";
+        const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
+        
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <div class="info">
+            <span class="nama">${nama}</span>
+            <span class="detail">ID: ${idPel} | <b>Rp ${parseInt(harga).toLocaleString('id-ID')}</b></span>
+          </div>
+          <div class="actions">
+            <button class="btn btn-wa" onclick="kirimWA('${nama}', '${noWa}', '${idPel}', '${harga}')">WA</button>
+            <button class="btn btn-lunas" onclick="markLunas(this)">Set Lunas</button>
+            <button class="btn btn-lapor" onclick="laporTelegram('${nama}', '${harga}')">Lapor</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
 
-        data.forEach(row => {
-            if (!row[0]) return;
-            const nama = row[0].trim();
-            const noWaPel = row[1] ? row[1].toString().trim() : "";
-            const idPel = row[2] ? row[2].trim() : "-";
-            const tagihan = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
-            
-            // Kolom E (index 4) berisi "firman" atau "rendi"
-            const petugas = row[4] ? row[4].toLowerCase().trim() : "";
+    function markLunas(btn) {
+      btn.style.backgroundColor = '#bdc3c7';
+      btn.innerText = 'Lunas ✓';
+      btn.disabled = true;
+    }
 
-            const div = document.createElement('div');
-            div.className = 'item';
-            div.innerHTML = `
-                <div class="info">
-                    <span class="nama">${nama}</span>
-                    <span class="detail">ID: ${idPel} | Rp ${tagihan}</span>
-                </div>
-                <div class="actions">
-                    <button class="btn-wa" onclick="kirimWA(this, '${nama.replace(/'/g, "\\'")}', '${noWaPel}', '${idPel}', '${tagihan}')">WA</button>
-                    <button class="btn-lunas" onclick="laporLunas(this, '${nama.replace(/'/g, "\\'")}', '${idPel}', '${tagihan}', '${petugas}')">Set Lunas</button>
-                </div>
-            `;
-            container.appendChild(div);
+    function kirimWA(nama, noWa, idPel, harga) {
+      const bulan = document.getElementById('bulanSelect').value;
+      const tgl = document.getElementById('tglTempo').value;
+      const tahun = new Date().getFullYear();
+      let hp = noWa.replace(/[^0-9]/g, '');
+      if (hp.startsWith('0')) hp = '62' + hp.substring(1);
+
+      const pesan = `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nKami sampaikan tagihan layanan internet bulan *${bulan}.${tahun}*\nDengan ID Pelanggan *${idPel}*\nSebesar *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nPembayaran paling lambat di tanggal *${tgl}*\nPembayaran nunggu tukang narik\nAdmin bendahara : RENDI dan FIRMAN\nuntuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
+      
+      window.open(`https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`, '_blank');
+    }
+
+    function laporTelegram(nama, harga) {
+      const bulan = document.getElementById('bulanSelect').value;
+      const waktu = new Date().toLocaleString('id-ID');
+      
+      const text = `💰 *LAPORAN MASUK*\n` +
+                   `---------------------------\n` +
+                   `👤 Nama : *${nama}*\n` +
+                   `📅 Bulan : ${bulan}\n` +
+                   `💵 Jumlah : *Rp ${parseInt(harga).toLocaleString('id-ID')}*\n` +
+                   `⏰ Waktu : ${waktu}\n` +
+                   `---------------------------`;
+
+      const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(text)}&parse_mode=Markdown`;
+
+      fetch(url)
+        .then(res => {
+          if(res.ok) {
+            alert('Berhasil Lapor ke Telegram!');
+          } else {
+            alert('Gagal Lapor! Periksa koneksi atau Bot.');
+          }
         });
     }
-
-    // --- 4. FUNGSI SET LUNAS (TERPISAH PER BENDAHARA) ---
-    async function laporLunas(btn, nama, id, tagihan, petugas) {
-        if(!confirm("Konfirmasi Lunas untuk " + nama + "?")) return;
-
-        let targetWA = "";
-        let scriptTujuan = "";
-
-        // Pilih tujuan berdasarkan isi Kolom E
-        if (petugas === "firman") {
-            targetWA = noWaFirman;
-            scriptTujuan = SCRIPT_FIRMAN;
-        } else if (petugas === "rendi") {
-            targetWA = noWaRendi;
-            scriptTujuan = SCRIPT_RENDI;
-        } else {
-            // Backup jika kosong
-            targetWA = noWaFirman + "," + noWaRendi;
-            scriptTujuan = SCRIPT_FIRMAN; // default ke firman
-        }
-
-        btn.innerText = "...";
-        btn.disabled = true;
-
-        try {
-            // A. Kirim ke Google Sheets Bendahara yang bersangkutan
-            await fetch(scriptTujuan, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': tagihan })
-            });
-
-            // B. Kirim WA ke Bendahara yang bersangkutan
-            await fetch('https://api.fonnte.com/send', {
-                method: 'POST',
-                headers: { 'Authorization': TOKEN_FONNTE },
-                body: new URLSearchParams({
-                    'target': targetWA,
-                    'message': `${nama}: Status: LUNAS ✅`
-                })
-            });
-
-            btn.innerText = "LUNAS ✅";
-            btn.style.backgroundColor = "#6c757d";
-        } catch (e) {
-            alert("Gagal lapor!");
-            btn.disabled = false;
-            btn.innerText = "Set Lunas";
-        }
-    }
-
-    // --- 5. FUNGSI KIRIM TAGIHAN ---
-    async function kirimWA(btn, nama, noWa, id, tagihan) {
-        const bulan = document.getElementById('bulanSelect').value;
-        const tgl = document.getElementById('tglTempo').value;
-        let hp = noWa.replace(/[^0-9]/g, '');
-        if (hp.startsWith('0')) hp = '62' + hp.substring(1);
-
-        const pesan = `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet bulan *${bulan}.${new Date().getFullYear()}*\nID: *${id}*\nTotal: *Rp ${tagihan}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
-
-        btn.innerText = "...";
-        try {
-            await fetch('https://api.fonnte.com/send', {
-                method: 'POST',
-                headers: { 'Authorization': TOKEN_FONNTE },
-                body: new URLSearchParams({ 'target': hp, 'message': pesan })
-            });
-            btn.innerText = "OK ✅";
-        } catch (e) { btn.innerText = "Error"; }
-    }
-
-    loadSemuaData();
   </script>
-</body> 
+</body>
 </html>
