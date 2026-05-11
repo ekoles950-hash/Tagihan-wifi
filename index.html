@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tagihan Sengkuni Net</title>
+  <title>Sengkuni Net Admin</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
-    .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #1a1a1a; margin-bottom: 20px; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
     
     .summary-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #c8e6c9; text-align: center; }
@@ -19,17 +19,18 @@
     select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; outline: none; box-sizing: border-box; background: #fff; }
     
     .item { border-bottom: 1px solid #eee; padding: 15px 0; }
-    .info { margin-bottom: 12px; }
     .nama { font-weight: bold; font-size: 17px; color: #222; text-transform: capitalize; }
-    .detail { font-size: 14px; color: #666; margin-top: 3px; }
+    .detail { font-size: 14px; color: #666; margin-top: 3px; margin-bottom: 10px; }
     
-    .actions { display: flex; gap: 8px; }
-    .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; flex: 1; color: white; transition: 0.2s; text-align: center; outline: none; }
-    .btn-wa { background-color: #25D366; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; color: white; transition: 0.2s; text-align: center; }
+    
+    .btn-wa { background-color: #25D366; } /* WA Biasa */
+    .btn-fonnte { background-color: #00a884; } /* WA Fonnte */
     .btn-lunas { background-color: #007bff; }
     .btn-lapor { background-color: #f39c12; }
-    .btn:active { transform: scale(0.92); opacity: 0.9; }
     
+    .btn:active { transform: scale(0.95); opacity: 0.9; }
     #loading { text-align: center; color: #888; font-style: italic; margin-top: 20px; }
   </style>
 </head>
@@ -41,6 +42,11 @@
     <div class="summary-box">
       <span>TOTAL GABUNGAN HARI INI:</span>
       <strong id="totalDisplay">Rp 0</strong>
+    </div>
+
+    <div class="form-group">
+      <label>Token Fonnte:</label>
+      <input type="text" id="fonnteToken" placeholder="Masukkan Token Fonnte Anda" value="">
     </div>
 
     <div class="form-group">
@@ -66,16 +72,14 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
-    <div id="loading">Menghubungkan ke sistem...</div>
+    <div id="loading">Memuat data pelanggan...</div>
     <div id="listPelanggan"></div>
   </div>
 
   <script>
-    // Konfigurasi Telegram
+    // Konfigurasi API
     const TELEGRAM_TOKEN = "8669839359:AAGPkRpOiLlYoBc3t4IgxcAGSgKFC8v1SwU";
     const TELEGRAM_CHAT_ID = "7933777456";
-
-    // Variabel Penjumlah
     let totalGabungan = 0;
 
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
@@ -106,7 +110,8 @@
             <span class="detail">ID: ${idPel} | <b>Rp ${parseInt(harga).toLocaleString('id-ID')}</b></span>
           </div>
           <div class="actions">
-            <button class="btn btn-wa" onclick="kirimWA('${nama}', '${noWa}', '${idPel}', '${harga}')">WA</button>
+            <button class="btn btn-wa" onclick="kirimWAManual('${nama}', '${noWa}', '${idPel}', '${harga}')">WA Biasa</button>
+            <button class="btn btn-fonnte" onclick="kirimFonnte('${nama}', '${noWa}', '${idPel}', '${harga}', this)">Fonnte</button>
             <button class="btn btn-lunas" onclick="markLunas(this)">Set Lunas</button>
             <button class="btn btn-lapor" onclick="laporTelegram('${nama}', '${harga}', this)">Lapor</button>
           </div>
@@ -115,52 +120,96 @@
       });
     }
 
-    function markLunas(btn) {
-      btn.style.backgroundColor = '#bdc3c7';
-      btn.innerText = 'Lunas ✓';
-      btn.disabled = true;
-    }
-
-    function kirimWA(nama, noWa, idPel, harga) {
+    function generatePesan(nama, idPel, harga) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
       const tahun = new Date().getFullYear();
-      let hp = noWa.replace(/[^0-9]/g, '');
-      if (hp.startsWith('0')) hp = '62' + hp.substring(1);
+      const formatHarga = parseInt(harga).toLocaleString('id-ID');
 
-      const pesan = `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nKami sampaikan tagihan layanan internet bulan *${bulan}.${tahun}*\nDengan ID Pelanggan *${idPel}*\nSebesar *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nPembayaran paling lambat di tanggal *${tgl}*\nPembayaran nunggu tukang narik\nAdmin bendahara : RENDI dan FIRMAN\nuntuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
-      
+      return `sistem chat otomatis tidak perlu di balas❌\n` +
+             `Pelanggan SENGKUNI NET\n` +
+             `Yth. *${nama}*\n` +
+             `Kami sampaikan tagihan layanan internet bulan *${bulan}.${tahun}*\n` +
+             `Dengan ID Pelanggan *${idPel}*\n` +
+             `Sebesar *Rp ${formatHarga}*\n` +
+             `Pembayaran paling lambat di tanggal *${tgl}*\n` +
+             `Pembayaran nunggu tukang narik\n` +
+             `Admin bendahara : RENDI dan FIRMAN\n` +
+             `untuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
+    }
+
+    function formatNomor(no) {
+      let hp = no.replace(/[^0-9]/g, '');
+      if (hp.startsWith('0')) hp = '62' + hp.substring(1);
+      return hp;
+    }
+
+    function kirimWAManual(nama, noWa, idPel, harga) {
+      const pesan = generatePesan(nama, idPel, harga);
+      const hp = formatNomor(noWa);
       window.open(`https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`, '_blank');
+    }
+
+    function kirimFonnte(nama, noWa, idPel, harga, btn) {
+      const token = document.getElementById('fonnteToken').value;
+      if (!token) return alert('Masukkan Token Fonnte dulu, Mas!');
+
+      const pesan = generatePesan(nama, idPel, harga);
+      const hp = formatNomor(noWa);
+
+      btn.innerText = "Mengirim...";
+      btn.disabled = true;
+
+      const formData = new FormData();
+      formData.append('target', hp);
+      formData.append('message', pesan);
+
+      fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: { 'Authorization': token },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status) {
+          btn.innerText = "Terkirim ✓";
+          btn.style.backgroundColor = "#7f8c8d";
+        } else {
+          alert('Gagal via Fonnte: ' + data.reason);
+          btn.innerText = "Fonnte";
+          btn.disabled = false;
+        }
+      })
+      .catch(err => alert('Error Fonnte: ' + err));
     }
 
     function laporTelegram(nama, harga, btn) {
       const bulan = document.getElementById('bulanSelect').value;
       const nominal = parseInt(harga);
-      
-      // Update Total Gabungan
       totalGabungan += nominal;
       document.getElementById('totalDisplay').innerText = "Rp " + totalGabungan.toLocaleString('id-ID');
 
-      const waktu = new Date().toLocaleString('id-ID');
-      
       const text = `💰 *LAPORAN MASUK*\n` +
-                   `---------------------------\n` +
                    `👤 Nama : *${nama}*\n` +
                    `📅 Bulan : ${bulan}\n` +
                    `💵 Masuk : *Rp ${nominal.toLocaleString('id-ID')}*\n` +
                    `📈 *TOTAL GABUNGAN : Rp ${totalGabungan.toLocaleString('id-ID')}*\n` +
-                   `---------------------------\n` +
-                   `⏰ ${waktu}`;
+                   `⏰ ${new Date().toLocaleString('id-ID')}`;
 
-      const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(text)}&parse_mode=Markdown`;
-
-      fetch(url).then(res => {
+      fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(text)}&parse_mode=Markdown`)
+      .then(res => {
         if(res.ok) {
-          btn.style.backgroundColor = '#7f8c8d';
           btn.innerText = 'Dilaporkan ✓';
+          btn.style.backgroundColor = '#7f8c8d';
           btn.disabled = true;
         }
       });
+    }
+
+    function markLunas(btn) {
+      btn.style.backgroundColor = '#bdc3c7';
+      btn.innerText = 'Lunas ✓';
+      btn.disabled = true;
     }
   </script>
 </body>
