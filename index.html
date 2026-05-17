@@ -12,11 +12,7 @@
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
     .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #1a1a1a; margin-bottom: 20px; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
-    
-    .summary-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #c8e6c9; text-align: center; }
-    .summary-box span { display: block; font-size: 14px; color: #2e7d32; font-weight: bold; }
-    .summary-box #totalDisplay { font-size: 24px; color: #1b5e20; }
+    h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
 
     .form-group { margin-bottom: 15px; }
     label { font-weight: bold; display: block; margin-bottom: 5px; color: #444; font-size: 14px; }
@@ -26,12 +22,12 @@
     .nama { font-weight: bold; font-size: 17px; color: #222; text-transform: capitalize; }
     .detail { font-size: 14px; color: #666; margin-top: 3px; margin-bottom: 10px; display: block; }
     
+    /* Layout grid 2 kolom untuk tombol per klien */
     .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; color: white; transition: 0.2s; text-align: center; outline: none; }
+    .btn { border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; color: white; transition: 0.2s; text-align: center; outline: none; }
     
     .btn-fonnte { background-color: #00a884; }
     .btn-lunas { background-color: #007bff; }
-    .btn-lapor { background-color: #f39c12; }
     .btn-wa { background-color: #25D366; }
     .btn-supabase { background-color: #8e44ad; } 
     
@@ -44,11 +40,6 @@
 
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
-    
-    <div class="summary-box">
-      <span>TOTAL GABUNGAN HARI INI:</span>
-      <strong id="totalDisplay">Rp 0</strong>
-    </div>
 
     <div class="form-group">
       <label>Pilih Bulan Tagihan:</label>
@@ -67,7 +58,7 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
-    <button id="btn-kirim-semua" class="btn btn-supabase" style="width: 100%; padding: 15px; font-size: 16px; margin-bottom: 20px; border-radius: 10px; display: none;" onclick="laporSemuaKeSupabase()">🚀 Kirim Semua Data ke Supabase Sekaligus</button>
+    <button id="btn-kirim-semua" class="btn btn-supabase" style="width: 100%; padding: 15px; font-size: 16px; margin-top: 10px; margin-bottom: 20px; border-radius: 10px; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" onclick="laporSemuaKeSupabase()">🚀 Kirim Semua Data ke Monitor (Web 1)</button>
 
     <div id="loading">Memuat data pelanggan...</div>
     <div id="listPelanggan"></div>
@@ -76,8 +67,6 @@
   <script>
     // --- KONFIGURASI API ASLI ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
-    const TELEGRAM_TOKEN = "8669839359:AAGPkRpOiLlYoBc3t4IgxcAGSgKFC8v1SwU";
-    const TELEGRAM_CHAT_ID = "7933777456";
     
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/LINK_SCRIPT_RENDI_DI_SINI"; 
@@ -88,10 +77,8 @@
     const supabaseUrl = 'https://wfcmhdqtoftuyfjtyfkk.supabase.co';
     const supabaseKey = 'sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld';
     const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-    let totalGabungan = 0;
     
-    // VARIABEL PENAMPUNG DATA MASSAL
+    // VARIABEL PENAMPUNG DATA MASSAL SUPABASE
     let dataMassalSupabase = [];
 
     // --- LOAD DATA ---
@@ -130,6 +117,7 @@
         const div = document.createElement('div');
         div.className = 'item';
         
+        // Desain tinggal 2 Tombol saja per klien
         div.innerHTML = `
           <div class="info">
             <span class="nama">${nama}</span>
@@ -137,8 +125,6 @@
           </div>
           <div class="actions">
             <button class="btn btn-wa" onclick="kirimFonnte('${nama}', '${noWa}', '${idPel}', '${harga}', this)">Kirim Tagihan</button>
-            <button class="btn btn-lapor" onclick="laporTelegram('${nama}', '${harga}', this)">Lapor Telegram</button>
-            <button class="btn btn-supabase" onclick="laporSupabase('${nama}', '${harga}', this)">Lapor Supabase</button>
             <button class="btn btn-lunas" onclick="setLunas('${nama}', '${idPel}', '${harga}', '${petugas}', this)">Set Lunas</button>
           </div>
         `;
@@ -170,46 +156,7 @@
       } catch (e) { btn.innerText = "Gagal"; }
     }
 
-    // --- FUNGSI LAPOR TELEGRAM ---
-    function laporTelegram(nama, harga, btn) {
-      const nominal = parseInt(harga);
-      totalGabungan += nominal;
-      document.getElementById('totalDisplay').innerText = "Rp " + totalGabungan.toLocaleString('id-ID');
-
-      const text = `💰 *LAPORAN MASUK*\n👤 Nama: *${nama}*\n💵 Nominal: *Rp ${nominal.toLocaleString('id-ID')}*\n📈 TOTAL: *Rp ${totalGabungan.toLocaleString('id-ID')}*\n⏰ ${new Date().toLocaleString('id-ID')}`;
-
-      fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(text)}&parse_mode=Markdown`)
-      .then(() => {
-        btn.innerText = "Dilaporkan ✅";
-        btn.style.backgroundColor = "#7f8c8d";
-        btn.disabled = true;
-      });
-    }
-
-    // --- FUNGSI KIRIM KE SUPABASE (SATUAN) ---
-    async function laporSupabase(nama, harga, btn) {
-      btn.innerText = "Proses...";
-      btn.disabled = true;
-
-      const { data, error } = await supabaseClient
-        .from('laporan_tagihan')
-        .insert([{ 
-          nama_klien: nama, 
-          jumlah_tagihan: harga, 
-          status: 'belum bayar' 
-        }]);
-      
-      if (error) {
-        alert("Gagal sinkronisasi Supabase: " + error.message);
-        btn.innerText = "Lapor Supabase";
-        btn.disabled = false;
-      } else {
-        btn.innerText = "Supabase ✅";
-        btn.style.backgroundColor = "#7f8c8d";
-      }
-    }
-
-    // --- FUNGSI KIRIM KE SUPABASE (MASSAL) ---
+    // --- FUNGSI KIRIM KE SUPABASE (MASSAL SEKALI KLIK) ---
     async function laporSemuaKeSupabase() {
       if(!confirm("Kirim SEMUA data klien ini ke dashboard Monitor (Web 1)?")) return;
 
@@ -219,7 +166,6 @@
       btn.disabled = true;
       btn.style.backgroundColor = "#9b59b6";
 
-      // Mengirim array utuh langsung ke Supabase
       const { data, error } = await supabaseClient
         .from('laporan_tagihan')
         .insert(dataMassalSupabase);
@@ -232,14 +178,6 @@
       } else {
         btn.innerText = "Semua Data Berhasil Dikirim! ✅";
         btn.style.backgroundColor = "#27ae60";
-        
-        // Ubah tampilan semua tombol supabase satuan biar kelihatan sudah dikirim
-        const tombolSatuan = document.querySelectorAll('.btn-supabase[onclick^="laporSupabase"]');
-        tombolSatuan.forEach(b => {
-          b.innerText = "Supabase ✅";
-          b.style.backgroundColor = "#7f8c8d";
-          b.disabled = true;
-        });
       }
     }
 
