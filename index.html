@@ -44,7 +44,7 @@
     .btn-update:hover { background-color: #2980b9; }
     .btn-update:disabled { background-color: #ccc; cursor: not-allowed; }
     
-    #loading-teks { text-align: center; color: #8d6e63; font-style: italic; margin-bottom: 20px; }
+    #loading-teks { text-align: center; color: #8d6e63; font-style: italic; margin-bottom: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -89,25 +89,29 @@
   </div>
 
   <script>
-    // --- KONFIGURASI SUPABASE ---
+    // --- KONFIGURASI SUPABASE (SUDAH DIPERBAIKI) ---
     const supabaseUrl = 'https://wfcmhdqtoftuyfjtyfkk.supabase.co';
     const supabaseKey = 'sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    // Menggunakan nama variabel supabaseClient agar tidak error (blank)
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     // --- FUNGSI AMBIL DATA DASHBOARD ---
     async function muatDataDashboard() {
-      const { data, error } = await supabase
+      // Menggunakan supabaseClient
+      const { data, error } = await supabaseClient
         .from('laporan_tagihan')
-        .select('*'); // Menarik semua data yang masuk
+        .select('*');
+
+      const loadingTeks = document.getElementById('loading-teks');
 
       if (error) {
         console.error("Gagal menarik data:", error);
-        document.getElementById('loading-teks').innerText = "Gagal memuat data dari database!";
-        document.getElementById('loading-teks').style.color = "red";
+        loadingTeks.innerText = "Gagal memuat: " + error.message;
+        loadingTeks.style.color = "red";
         return;
       }
 
-      document.getElementById('loading-teks').style.display = 'none';
+      loadingTeks.style.display = 'none'; // Sembunyikan teks loading jika sukses
 
       let pemasukanLunas = 0;
       let nominalBelumBayar = 0;
@@ -161,7 +165,8 @@
       btn.innerText = "Memproses...";
       btn.disabled = true;
 
-      const { data, error } = await supabase
+      // Menggunakan supabaseClient
+      const { data, error } = await supabaseClient
         .from('laporan_tagihan')
         .update({ status: 'lunas' })
         .eq('id', id);
@@ -171,7 +176,7 @@
         btn.innerText = "Tandai Lunas";
         btn.disabled = false;
       } else {
-        // Refresh tabel dan kalkulasi otomatis jika sukses
+        // Refresh tabel otomatis jika sukses
         muatDataDashboard();
       }
     }
@@ -179,7 +184,7 @@
     // Panggil saat pertama kali web dibuka
     muatDataDashboard();
 
-    // Opsional: Refresh otomatis setiap 15 detik agar Admin selalu melihat data terbaru (hapus tanda // di bawah jika ingin dipakai)
+    // Refresh otomatis setiap 15 detik (aktifkan jika perlu)
     // setInterval(muatDataDashboard, 15000); 
 
   </script>
