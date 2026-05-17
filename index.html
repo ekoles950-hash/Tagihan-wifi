@@ -3,133 +3,175 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Warung Basecamp Coffee - Sinkronisasi Supabase</title>
-  
+  <title>Tagihan Sengkuni Net</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4ece1; padding: 15px; margin: 0; color: #3e2723; }
-    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(93, 64, 55, 0.1); border-top: 5px solid #8B5A2B; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #1a1a1a; margin-bottom: 20px; border-bottom: 3px solid #25D366; padding-bottom: 10px; }
     
-    h2 { text-align: center; color: #5d4037; margin-bottom: 5px; }
-    .subtitle { text-align: center; color: #795548; font-size: 14px; margin-top: 0; margin-bottom: 20px; border-bottom: 2px dashed #d7ccc8; padding-bottom: 15px; }
+    .summary-box { background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #c8e6c9; text-align: center; }
+    .summary-box span { display: block; font-size: 14px; color: #2e7d32; font-weight: bold; }
+    .summary-box #totalDisplay { font-size: 24px; color: #1b5e20; }
+
+    .form-group { margin-bottom: 15px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #444; font-size: 14px; }
+    select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; outline: none; box-sizing: border-box; background: #fff; }
     
-    .item { border-bottom: 1px solid #eee; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
-    .info { flex: 1; }
-    .nama { font-weight: bold; font-size: 18px; color: #3e2723; text-transform: capitalize; display: block; margin-bottom: 3px; }
-    .detail { font-size: 15px; color: #6d4c41; }
+    .item { border-bottom: 1px solid #eee; padding: 15px 0; }
+    .nama { font-weight: bold; font-size: 17px; color: #222; text-transform: capitalize; }
+    .detail { font-size: 14px; color: #666; margin-top: 3px; margin-bottom: 10px; }
     
-    .btn-lapor { background-color: #6d4c41; border: none; padding: 12px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; color: white; transition: 0.2s; }
-    .btn-lapor:active { transform: scale(0.95); }
-    .btn-lapor:disabled { background-color: #bcaaa4; cursor: not-allowed; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn { border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; color: white; transition: 0.2s; text-align: center; outline: none; }
     
-    #loading { text-align: center; color: #8d6e63; font-style: italic; margin-top: 20px; font-weight: bold; }
-    #error-msg { color: #d32f2f; text-align: center; margin-top: 10px; font-weight: bold; display: none; background: #ffcdd2; padding: 10px; border-radius: 8px; }
+    .btn-fonnte { background-color: #00a884; }
+    .btn-lunas { background-color: #007bff; }
+    .btn-lapor { background-color: #f39c12; }
+    .btn-wa { background-color: #25D366; }
+    
+    .btn:active { transform: scale(0.95); opacity: 0.9; }
+    #loading { text-align: center; color: #888; font-style: italic; margin-top: 20px; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h2>Warung Basecamp Coffee</h2>
-    <p class="subtitle">Kirim Data Spreadsheet ke Database Supabase</p>
+    <h2>Tagihan Sengkuni Net</h2>
     
-    <div id="loading">Menyeduh data pelanggan... ☕</div>
-    <div id="error-msg"></div>
+    <div class="summary-box">
+      <span>TOTAL GABUNGAN HARI INI:</span>
+      <strong id="totalDisplay">Rp 0</strong>
+    </div>
+
+    <div class="form-group">
+      <label>Pilih Bulan Tagihan:</label>
+      <select id="bulanSelect">
+        <option value="Januari">Januari</option>
+        <option value="Februari">Februari</option>
+        <option value="Maret">Maret</option>
+        <option value="April">April</option>
+        <option value="Mei">Mei</option>
+        <option value="Juni" selected>Juni</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Tanggal Jatuh Tempo:</label>
+      <input type="number" id="tglTempo" value="4">
+    </div>
+
+    <div id="loading">Memuat data pelanggan...</div>
     <div id="listPelanggan"></div>
   </div>
 
   <script>
-    // Konfigurasi Supabase
-    const supabaseUrl = 'https://wfcmhdqtoftuyfjtyfkk.supabase.co';
-    const supabaseKey = 'sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    // --- KONFIGURASI API ---
+    const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
+    const TELEGRAM_TOKEN = "8669839359:AAGPkRpOiLlYoBc3t4IgxcAGSgKFC8v1SwU";
+    const TELEGRAM_CHAT_ID = "7933777456";
+    
+    // Konfigurasi Script Bendahara
+    const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
+    const SCRIPT_RENDI = "https://script.google.com/macros/s/LINK_SCRIPT_RENDI_DI_SINI"; 
 
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Fungsi menampilkan pesan jika gagal
-    function tampilkanError(pesan) {
+    let totalGabungan = 0;
+
+    // --- LOAD DATA ---
+    Papa.parse(csvUrl, {
+      download: true,
+      complete: function(results) {
         document.getElementById('loading').style.display = 'none';
-        const errDiv = document.getElementById('error-msg');
-        errDiv.style.display = 'block';
-        errDiv.innerHTML = "Gagal memuat: " + pesan;
-    }
+        tampilkanData(results.data.slice(1));
+      }
+    });
 
-    // Fungsi Utama Tarik Data
-    async function ambilData() {
-        try {
-            // Kita tarik datanya secara paksa pakai fetch
-            const response = await fetch(csvUrl);
-            if (!response.ok) throw new Error("Akses diblokir oleh sistem");
-            
-            const csvText = await response.text();
-            
-            // Masukkan teks mentah ke PapaParse
-            Papa.parse(csvText, {
-                complete: function(results) {
-                    document.getElementById('loading').style.display = 'none';
-                    const data = results.data.slice(1); // Potong header
-                    const container = document.getElementById('listPelanggan');
-                    
-                    if (data.length === 0) {
-                        container.innerHTML = "<p style='text-align:center;'>Data spreadsheet kosong.</p>";
-                        return;
-                    }
-
-                    data.forEach(row => {
-                        if (!row[0]) return; 
-                        
-                        const nama = row[0].trim();
-                        // Ambil harga dari kolom ke-4 (row[3])
-                        const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
-                        
-                        const div = document.createElement('div');
-                        div.className = 'item';
-                        div.innerHTML = `
-                            <div class="info">
-                                <span class="nama">${nama}</span>
-                                <span class="detail">Rp ${parseInt(harga).toLocaleString('id-ID')}</span>
-                            </div>
-                            <div>
-                                <button class="btn-lapor" onclick="laporSupabase('${nama}', '${harga}', this)">Lapor</button>
-                            </div>
-                        `;
-                        container.appendChild(div);
-                    });
-                },
-                error: function(err) {
-                    tampilkanError(err.message);
-                }
-            });
-        } catch (error) {
-            tampilkanError(error.message);
-        }
-    }
-
-    // Jalankan skrip
-    ambilData();
-
-    // Fungsi Kirim ke Supabase
-    async function laporSupabase(nama, harga, btn) {
-        btn.innerText = "...";
-        btn.disabled = true;
-
-        const { data, error } = await supabase
-            .from('laporan_tagihan')
-            .insert([{ 
-                nama_klien: nama, 
-                jumlah_tagihan: harga, 
-                status: 'belum bayar' 
-            }]);
+    function tampilkanData(data) {
+      const container = document.getElementById('listPelanggan');
+      data.forEach(row => {
+        if (!row[0]) return;
+        const nama = row[0].trim();
+        const noWa = row[1] ? row[1].toString().trim() : "";
+        const idPel = row[2] ? row[2].trim() : "-";
+        const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
+        const petugas = row[4] ? row[4].toLowerCase().trim() : "";
         
-        if (error) {
-            alert("Gagal kirim ke Supabase: " + error.message);
-            btn.innerText = "Lapor";
-            btn.disabled = false;
-        } else {
-            btn.innerText = "Terkirim ✅";
-            btn.style.backgroundColor = "#4caf50"; 
-        }
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <div class="info">
+            <span class="nama">${nama}</span>
+            <span class="detail">ID: ${idPel} | <b>Rp ${parseInt(harga).toLocaleString('id-ID')}</b></span>
+          </div>
+          <div class="actions">
+            <button class="btn btn-wa" onclick="kirimFonnte('${nama}', '${noWa}', '${idPel}', '${harga}', this)">Kirim Tagihan</button>
+            <button class="btn btn-lapor" onclick="laporTelegram('${nama}', '${harga}', this)">Lapor Telegram</button>
+            <button class="btn btn-lunas" onclick="setLunas('${nama}', '${idPel}', '${harga}', '${petugas}', this)">Set Lunas</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // --- FUNGSI PESAN ---
+    function buatPesan(nama, idPel, harga) {
+      const bulan = document.getElementById('bulanSelect').value;
+      const tgl = document.getElementById('tglTempo').value;
+      return `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nKami sampaikan tagihan layanan internet bulan *${bulan}.${new Date().getFullYear()}*\nDengan ID Pelanggan *${idPel}*\nSebesar *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nPembayaran paling lambat di tanggal *${tgl}*\nPembayaran nunggu tukang narik\nAdmin bendahara : RENDI dan FIRMAN\nuntuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
+    }
+
+    // --- FUNGSI KIRIM TAGIHAN (FONNTE) ---
+    async function kirimFonnte(nama, noWa, idPel, harga, btn) {
+      let hp = noWa.replace(/[^0-9]/g, '');
+      if (hp.startsWith('0')) hp = '62' + hp.substring(1);
+      
+      btn.innerText = "Mengirim...";
+      try {
+        await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: { 'Authorization': TOKEN_FONNTE },
+          body: new URLSearchParams({ 'target': hp, 'message': buatPesan(nama, idPel, harga) })
+        });
+        btn.innerText = "Terkirim ✅";
+        btn.style.backgroundColor = "#7f8c8d";
+      } catch (e) { btn.innerText = "Gagal"; }
+    }
+
+    // --- FUNGSI LAPOR TELEGRAM (DENGAN TOTAL) ---
+    function laporTelegram(nama, harga, btn) {
+      const nominal = parseInt(harga);
+      totalGabungan += nominal;
+      document.getElementById('totalDisplay').innerText = "Rp " + totalGabungan.toLocaleString('id-ID');
+
+      const text = `💰 *LAPORAN MASUK*\n👤 Nama: *${nama}*\n💵 Nominal: *Rp ${nominal.toLocaleString('id-ID')}*\n📈 TOTAL: *Rp ${totalGabungan.toLocaleString('id-ID')}*\n⏰ ${new Date().toLocaleString('id-ID')}`;
+
+      fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodeURIComponent(text)}&parse_mode=Markdown`)
+      .then(() => {
+        btn.innerText = "Dilaporkan ✅";
+        btn.style.backgroundColor = "#7f8c8d";
+        btn.disabled = true;
+      });
+    }
+
+    // --- FUNGSI SET LUNAS (APPS SCRIPT) ---
+    async function setLunas(nama, id, harga, petugas, btn) {
+      if(!confirm("Set Lunas untuk " + nama + "?")) return;
+      
+      let scriptUrl = (petugas === "rendi") ? SCRIPT_RENDI : SCRIPT_FIRMAN;
+      btn.innerText = "...";
+
+      try {
+        await fetch(scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga })
+        });
+        btn.innerText = "Lunas ✅";
+        btn.style.backgroundColor = "#6c757d";
+        btn.disabled = true;
+      } catch (e) { alert("Error Apps Script"); }
     }
   </script>
 </body>
