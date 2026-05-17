@@ -12,9 +12,13 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4ece1; margin: 0; padding: 20px; color: #3e2723; }
     .container { max-width: 1000px; margin: auto; }
     
-    .header { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(93, 64, 55, 0.1); border-top: 5px solid #8B5A2B; margin-bottom: 25px; text-align: center; }
+    .header { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(93, 64, 55, 0.1); border-top: 5px solid #8B5A2B; margin-bottom: 25px; text-align: center; position: relative; }
     .header h1 { margin: 0; color: #5d4037; font-size: 28px; }
     .header p { margin: 5px 0 0 0; color: #795548; font-size: 15px; }
+
+    /* Tombol Reset */
+    .btn-reset { background-color: #c0392b; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    .btn-reset:hover { background-color: #a5281b; }
 
     /* Grid Kartu Monitor */
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
@@ -53,6 +57,7 @@
     <div class="header">
       <h1>Monitor Tagihan Warung Basecamp</h1>
       <p>Dashboard terpusat untuk memantau data yang dikirim dari Web 2</p>
+      <button class="btn-reset" onclick="resetDataBulanIni()">🗑️ Reset Data Bulan Ini</button>
     </div>
 
     <div class="dashboard-grid">
@@ -89,15 +94,13 @@
   </div>
 
   <script>
-    // --- KONFIGURASI SUPABASE (SUDAH DIPERBAIKI) ---
+    // --- KONFIGURASI SUPABASE ---
     const supabaseUrl = 'https://wfcmhdqtoftuyfjtyfkk.supabase.co';
     const supabaseKey = 'sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld';
-    // Menggunakan nama variabel supabaseClient agar tidak error (blank)
     const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
     // --- FUNGSI AMBIL DATA DASHBOARD ---
     async function muatDataDashboard() {
-      // Menggunakan supabaseClient
       const { data, error } = await supabaseClient
         .from('laporan_tagihan')
         .select('*');
@@ -111,16 +114,20 @@
         return;
       }
 
-      loadingTeks.style.display = 'none'; // Sembunyikan teks loading jika sukses
+      loadingTeks.style.display = 'none';
 
       let pemasukanLunas = 0;
       let nominalBelumBayar = 0;
       let klienBelumBayar = 0;
 
       const tbody = document.getElementById('tabel-body');
-      tbody.innerHTML = ''; // Bersihkan tabel sebelum diisi ulang
+      tbody.innerHTML = ''; 
 
-      // Proses perhitungan dan pengisian tabel
+      // Jika kosong
+      if(data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#795548;">Data laporan bulan ini masih kosong. Silakan kirim data dari Web 2.</td></tr>';
+      }
+
       data.forEach(row => {
         const nominal = parseInt(row.jumlah_tagihan) || 0;
         const status = row.status || 'belum bayar';
@@ -132,7 +139,6 @@
           klienBelumBayar += 1;
         }
 
-        // Desain baris tabel
         const tr = document.createElement('tr');
         
         let badgeHtml = status === 'lunas' 
@@ -152,7 +158,6 @@
         tbody.appendChild(tr);
       });
 
-      // Update kotak besar di atas
       document.getElementById('total-pemasukan').innerText = 'Rp ' + pemasukanLunas.toLocaleString('id-ID');
       document.getElementById('total-klien').innerText = klienBelumBayar + ' Orang';
       document.getElementById('total-nominal').innerText = 'Rp ' + nominalBelumBayar.toLocaleString('id-ID');
@@ -165,7 +170,6 @@
       btn.innerText = "Memproses...";
       btn.disabled = true;
 
-      // Menggunakan supabaseClient
       const { data, error } = await supabaseClient
         .from('laporan_tagihan')
         .update({ status: 'lunas' })
@@ -176,16 +180,41 @@
         btn.innerText = "Tandai Lunas";
         btn.disabled = false;
       } else {
-        // Refresh tabel otomatis jika sukses
         muatDataDashboard();
+      }
+    }
+
+    // --- FUNGSI RESET DATA BULAN BARU ---
+    async function resetDataBulanIni() {
+      let konfirmasi = prompt("PERINGATAN! Ini akan menghapus permanen SEMUA data laporan tagihan saat ini.\n\nKetik kata RESET (huruf besar) untuk melanjutkan:");
+      
+      if (konfirmasi === 'RESET') {
+        const loadingTeks = document.getElementById('loading-teks');
+        loadingTeks.style.display = 'block';
+        loadingTeks.innerText = "Sedang mereset semua data... ⏳";
+        loadingTeks.style.color = "#8B5A2B";
+
+        // Menghapus semua row data tanpa terkecuali
+        const { error } = await supabaseClient
+          .from('laporan_tagihan')
+          .delete()
+          .not('id', 'is', null);
+
+        if (error) {
+          alert("Gagal mereset data: " + error.message);
+          loadingTeks.innerText = "Gagal mereset!";
+          loadingTeks.style.color = "red";
+        } else {
+          alert("Data berhasil dikosongkan! Dashboard siap digunakan untuk bulan baru.");
+          muatDataDashboard(); // Muat ulang layar jadi 0 semua
+        }
+      } else if (konfirmasi !== null) {
+        alert("Kata kunci salah atau dibatalkan. Data tidak dihapus.");
       }
     }
 
     // Panggil saat pertama kali web dibuka
     muatDataDashboard();
-
-    // Refresh otomatis setiap 15 detik (aktifkan jika perlu)
-    // setInterval(muatDataDashboard, 15000); 
 
   </script>
 </body>
