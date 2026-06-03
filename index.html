@@ -40,9 +40,11 @@
     .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
     .btn-lunas, .btn-lunas-sheet { background-color: #007bff; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
     .btn-sync { background-color: #8e44ad; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-bottom: 15px; display: none; }
+    .btn-reset { background-color: #dc3545; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; margin-top: 20px; transition: 0.3s; }
     
     .btn-wa:hover { background-color: #128C7E; }
     .btn-lunas:hover, .btn-lunas-sheet:hover { background-color: #0056b3; }
+    .btn-reset:hover { background-color: #bd2130; }
     button:disabled { background-color: #ccc !important; cursor: not-allowed; }
     #loading, #loading-sheet { text-align: center; color: #666; font-style: italic; margin-top: 20px; }
   </style>
@@ -100,6 +102,9 @@
       </div>
       <div id="loading">Memuat database Monitor...</div>
       <div id="listMonitor"></div>
+      
+      <!-- TOMBOL RESET BULANAN -->
+      <button id="btn-reset-db" class="btn-reset" onclick="resetDatabaseSupabase()">🔄 Reset Database Ke Bulan Berikutnya</button>
     </div>
 
     <!-- ================= PANEL FITUR 2: DATA EXCEL PELANGGAN ================= -->
@@ -118,7 +123,7 @@
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // 100% SINKRON: Menggunakan URL subdomain asli 20 karakter milikmu & API Key yang valid
+    // Kredensial Proyek Supabase
     const SUPABASE_URL = "https://wfcmhdqtoftuyfjtyfkk.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -217,7 +222,6 @@
         
         let nominalAngka = parseInt(harga) || 0;
 
-        // Struktur objek dikunci pakai nama kolom langsung biar anti kebalik di database
         dataMassalSupabase.push({ 
           nama_klien: nama, 
           jumlah_tagihan: nominalAngka,
@@ -259,6 +263,7 @@
       } catch (e) { btn.innerText = "Error"; }
     }
 
+    // --- AKSI: SET LUNAS ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
@@ -272,8 +277,16 @@
       btn.disabled = true;
 
       try {
+        // Edit status di Supabase menjadi LUNAS
+        await supabaseClient
+          .from('laporan_tagihan')
+          .update({ status_bayar: 'LUNAS', status: 'LUNAS' })
+          .eq('nama_klien', nama);
+
+        // Kirim laporan ke Google Sheets
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
+        // Kirim konfirmasi WA ke Bendahara
         await fetch('https://api.fonnte.com/send', {
           method: 'POST',
           headers: { 'Authorization': TOKEN_FONNTE },
@@ -313,12 +326,44 @@
         btn.innerText = "Kirim Semua Data"; 
         btn.disabled = false; 
         btn.style.backgroundColor = "#8e44ad";
-        console.log("Detail Error:", error);
       } else {
         btn.innerText = "Terkirim! ✅"; btn.style.backgroundColor = "#27ae60";
         muatDataDashboard();
         alert("Data berhasil disinkron! Silakan cek di Tab Monitor.");
         bukaTab('monitor'); 
+      }
+    }
+
+    // --- AKSI: FITUR RESET DATABASE UNTUK BULAN BERIKUTNYA ---
+    async function resetDatabaseSupabase() {
+      const konfirmasi = prompt("⚠️ PERINGATAN KELOLA DATA BULANAN!\nTindakan ini akan MENGHAPUS TOTAL semua data monitor tagihan saat ini untuk berganti ke bulan baru.\n\nKetik kata 'RESET' (huruf besar semua) untuk melanjutkan:");
+      
+      if (konfirmasi !== "RESET") {
+        alert("Reset dibatalkan. Kata kunci salah!");
+        return;
+      }
+
+      const btn = document.getElementById('btn-reset-db');
+      btn.innerText = "Mengosongkan Database... ⏳";
+      btn.disabled = true;
+
+      try {
+        // Eksekusi penghapusan massal seluruh baris di tabel Supabase
+        const { error } = await supabaseClient
+          .from('laporan_tagihan')
+          .delete()
+          .neq('nama_klien', 'KOLOM_YANG_TIDAK_MUNGKIN_ADA'); // Trik hapus all rows
+
+        if (error) throw error;
+
+        alert("Database Sengkuni Net berhasil dikosongkan! Silakan ganti Bulan Tagihan di atas dan kirim ulang data baru.");
+        muatDataDashboard(); // Reload agar dashboard bersih jadi Rp 0 kembali
+
+      } catch (e) {
+        alert("Gagal mereset database bulanan: " + e.message);
+      } finally {
+        btn.innerText = "🔄 Reset Database Ke Bulan Berikutnya";
+        btn.disabled = false;
       }
     }
 
