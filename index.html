@@ -31,7 +31,7 @@
     .card h4 { margin: 0; color: #666; font-size: 14px; }
     .card p { margin: 5px 0 0 0; font-size: 20px; font-weight: bold; color: #333; }
 
-    .item, .item-sheet { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
+    .item, .item-sheet { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
     .info { display: flex; flex-direction: column; flex: 1; }
     .nama, .nama-sheet { font-weight: bold; font-size: 16px; color: #333; }
     .detail, .detail-sheet { font-size: 13px; color: #777; margin-top: 4px; }
@@ -123,7 +123,7 @@
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Kredensial Proyek Supabase
+    // Kredensial Proyek Supabase Bersih Pas
     const SUPABASE_URL = "https://wfcmhdqtoftuyfjtyfkk.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -142,7 +142,7 @@
       if(tabName === 'pelanggan') document.getElementById('btn-tab-pelanggan').classList.add('active');
     }
 
-    // --- FITUR MONITOR: SINKRONISASI DASHBOARD ---
+    // --- FITUR MONITOR: SINKRONISASI & TAMPILKAN DAFTAR DI MONITOR ---
     async function muatDataDashboard() {
       try {
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
@@ -172,12 +172,21 @@
               nominalBelumBayar += tagihan;
             }
 
+            // REKAYASA TOMBOL: Muncul tombol Set Lunas di Monitor depan jika statusnya BELUM BAYAR
+            let tombolAksiDepan = "";
+            if (status !== 'LUNAS') {
+              tombolAksiDepan = `<button class="btn-lunas" onclick="setLunasMurniDariMonitor('${nama}', '${tagihan}', this)">Set Lunas</button>`;
+            }
+
             const div = document.createElement('div');
             div.className = 'item';
             div.innerHTML = `
               <div class="info">
                 <span class="nama">${nama}</span>
                 <span class="detail">Tagihan: Rp ${tagihan.toLocaleString('id-ID')} | <b>${status}</b></span>
+              </div>
+              <div class="actions">
+                ${tombolAksiDepan}
               </div>
             `;
             listMonitor.appendChild(div);
@@ -195,6 +204,33 @@
       }
     }
 
+    // --- FUNGSI KLIK SET LUNAS LANGSUNG DARI TAB MONITOR DEPAN ---
+    async function setLunasMurniDariMonitor(nama, harga, btn) {
+      if(!confirm("Set Lunas untuk " + nama + " langsung dari Dashboard Monitor?")) return;
+      btn.innerText = "...";
+      btn.disabled = true;
+
+      try {
+        // Edit status baris di database Supabase menjadi LUNAS
+        const { error } = await supabaseClient
+          .from('laporan_tagihan')
+          .update({ status_bayar: 'LUNAS', status: 'LUNAS' })
+          .eq('nama_klien', nama);
+
+        if (error) throw error;
+
+        btn.innerText = "Lunas ✅";
+        btn.style.backgroundColor = "#6c757d";
+        
+        // Reload kalkulasi dashboard atas agar langsung bertambah
+        muatDataDashboard();
+      } catch (e) {
+        alert("Gagal update status lunas: " + e.message);
+        btn.innerText = "Set Lunas";
+        btn.disabled = false;
+      }
+    }
+
     function ambilDataExcel() {
       Papa.parse(csvPelanggan, {
         download: true,
@@ -206,7 +242,7 @@
       });
     }
 
-    // --- MENAMPILKAN DATA SHEET & STRUKTUR MASAL ---
+    // --- MENAMPILKAN DATA SPREADSHEET DI TAB BELAKANG ---
     function tampilkanDataSheet(data) {
       const container = document.getElementById('listPelanggan');
       container.innerHTML = "";
@@ -263,7 +299,7 @@
       } catch (e) { btn.innerText = "Error"; }
     }
 
-    // --- AKSI: SET LUNAS ---
+    // --- AKSI: SET LUNAS DI TAB DATA SPREADSHEET (LENGKAP DENGAN NOTIFIKASI WA BENDAHARA) ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
@@ -334,7 +370,7 @@
       }
     }
 
-    // --- AKSI: FITUR RESET DATABASE UNTUK BULAN BERIKUTNYA ---
+    // --- FITUR RESET DATABASE ---
     async function resetDatabaseSupabase() {
       const konfirmasi = prompt("⚠️ PERINGATAN KELOLA DATA BULANAN!\nTindakan ini akan MENGHAPUS TOTAL semua data monitor tagihan saat ini untuk berganti ke bulan baru.\n\nKetik kata 'RESET' (huruf besar semua) untuk melanjutkan:");
       
@@ -348,16 +384,15 @@
       btn.disabled = true;
 
       try {
-        // Eksekusi penghapusan massal seluruh baris di tabel Supabase
         const { error } = await supabaseClient
           .from('laporan_tagihan')
           .delete()
-          .neq('nama_klien', 'KOLOM_YANG_TIDAK_MUNGKIN_ADA'); // Trik hapus all rows
+          .neq('nama_klien', 'KOLOM_YANG_TIDAK_MUNGKIN_ADA');
 
         if (error) throw error;
 
-        alert("Database Sengkuni Net berhasil dikosongkan! Silakan ganti Bulan Tagihan di atas dan kirim ulang data baru.");
-        muatDataDashboard(); // Reload agar dashboard bersih jadi Rp 0 kembali
+        alert("Database Sengkuni Net berhasil dikosongkan!");
+        muatDataDashboard();
 
       } catch (e) {
         alert("Gagal mereset database bulanan: " + e.message);
