@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tagihan Sengkuni Net</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <!-- Library Resmi Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
@@ -51,11 +52,13 @@
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
     
+    <!-- Navigasi Utama -->
     <div class="tabs">
       <button class="tab-btn active" onclick="bukaTab('monitor')">🖥️ Monitor Tagihan</button>
       <button class="tab-btn" onclick="bukaTab('pelanggan')">📝 Data Sengkuni Net</button>
     </div>
 
+    <!-- Panel Pengaturan Bulan & Jatuh Tempo -->
     <div class="form-group">
       <label>Pilih Bulan Tagihan:</label>
       <select id="bulanSelect">
@@ -79,6 +82,7 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
+    <!-- ================= TAB 1: MONITOR TAGIHAN ================= -->
     <div id="tab-monitor" class="tab-content active">
       <div class="dashboard-grid">
         <div class="card lunas">
@@ -98,6 +102,7 @@
       <div id="listMonitor"></div>
     </div>
 
+    <!-- ================= TAB 2: DATA PELANGGAN ================= -->
     <div id="tab-pelanggan" class="tab-content">
       <button id="btn-kirim-semua" class="btn-sync" onclick="laporSemuaKeSupabase()">Kirim Semua Data ke Monitor Tagihan</button>
       <div id="loading-sheet">Memuat data Excel pelanggan...</div>
@@ -107,18 +112,18 @@
   </div>
 
   <script>
-    // --- 1. KONFIGURASI UTAMA ---
+    // --- 1. KONFIGURASI INTEGRASI ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Kredensial Proyek Supabase Asli Ko Eko
-    const SUPABASE_URL = "https://wfcmhdqwfcmhdqwfcmhd.supabase.co"; 
+    // Kredensial Otentik Supabase Milik Ko Eko (wfcmhdqvfcmhdqvfcmhd)
+    const SUPABASE_URL = "https://wfcmhdqvfcmhdqvfcmhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmY21oZHF3ZmNtaGRxdmZjbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcyMDAwMDAsImV4cCI6MjA1MDU2MDAwMH0.exampleKey"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Nomor HP Bendahara
+    // Nomor WA Admin Bendahara
     const hpFirman = "6282115794996"; 
     const hpRendi = "6281329936605"; 
 
@@ -133,7 +138,7 @@
       event.currentTarget.classList.add('active');
     }
 
-    // --- FITUR MONITOR: TAMPILKAN DASHBOARD DARI SUPABASE ---
+    // --- FITUR MONITOR: DASHBOARD MONITOR UTAMA ---
     async function muatDataDashboard() {
       try {
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
@@ -183,7 +188,7 @@
       }
     }
 
-    // --- LOAD DATA DARI EXCEL SPREADSHEET ---
+    // --- AMBIL DATA EXCEL PELANGGAN ---
     function ambilDataExcel() {
       Papa.parse(csvPelanggan, {
         download: true,
@@ -195,7 +200,7 @@
       });
     }
 
-    // --- TAMPILKAN DAFTAR NAMA EXCEL DI LAYAR ---
+    // --- TAMPILKAN DAFTAR PELANGGAN SPREADSHEET ---
     function tampilkanDataSheet(data) {
       const container = document.getElementById('listPelanggan');
       container.innerHTML = "";
@@ -209,7 +214,7 @@
         const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
         const petugas = row[4] ? row[4].toLowerCase().trim() : "";
         
-        // Memasukkan data ke dalam array massal dengan nama kolom database yang benar
+        // FIX: Kolom status_bayar dan tipe tagihan angka agar pas 100% dengan Supabase
         dataMassalSupabase.push({ 
           nama_klien: nama, 
           jumlah_tagihan: parseInt(harga), 
@@ -232,14 +237,14 @@
       });
     }
 
-    // --- LOGIKA FORMULA TEXT PESAN TAGIHAN ---
+    // --- TEMPLATE PESAN TAGIHAN ---
     function buatPesan(nama, idPel, harga) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
       return `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nKami sampaikan tagihan layanan internet bulan *${bulan}.${new Date().getFullYear()}*\nDengan ID Pelanggan *${idPel}*\nSebesar *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nPembayaran paling lambat di tanggal *${tgl}*\nPembayaran nunggu tukang narik\nAdmin bendahara : RENDI dan FIRMAN\nuntuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
     }
 
-    // --- BUTTON ACTIONS: KIRIM WA KE PELANGGAN ---
+    // --- TOMBOL: KIRIM WA KE PELANGGAN ---
     async function kirimFonnte(nama, noWa, idPel, harga, btn) {
       let hp = noWa.replace(/[^0-9]/g, ''); if (hp.startsWith('0')) hp = '62' + hp.substring(1);
       btn.innerText = "...";
@@ -253,9 +258,9 @@
       } catch (e) { btn.innerText = "Gagal"; }
     }
 
-    // --- BUTTON ACTIONS: SET LUNAS SATUAN (APPS SCRIPT + WA BENDAHARA) ---
+    // --- TOMBOL: SET LUNAS SATUAN (SHEETS + NOTIF WA BENDAHARA) ---
     async function setLunas(nama, id, harga, petugas, btn) {
-      if(!confirm("Set Lunas untuk " + nama + "?")) return;
+      if(!confirm("Set Lunas untuk " + nama + " via Script?")) return;
       
       let scriptUrl = (petugas === "rendi") ? SCRIPT_RENDI : SCRIPT_FIRMAN;
       let tujuanWA = (petugas === "firman") ? hpFirman : (petugas === "rendi" ? hpRendi : `${hpFirman},${hpRendi}`);
@@ -264,7 +269,7 @@
       btn.disabled = true;
 
       try {
-        // 1. Simpan laporan pelunasan ke Google Sheets via Google Script Web App
+        // 1. Simpan laporan pelunasan ke Google Sheets via Apps Script Web App
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
         // 2. Kirim Notifikasi konfirmasi WA ke bendahara masing-masing (anti-gagal/terpisah)
@@ -290,13 +295,12 @@
       }
     }
 
-    // --- BUTTON ACTIONS: SINKRONISASI MASSAL DATA EXCEL KE SUPABASE ---
+    // --- TOMBOL: MASSAL INSERT SEMUA DATA EXCEL KE SUPABASE ---
     async function laporSemuaKeSupabase() {
       if(!confirm("Kirim SEMUA data ini ke Monitor Tagihan?")) return;
       const btn = document.getElementById('btn-kirim-semua');
       btn.innerText = "Mengirim... ⏳"; btn.disabled = true; btn.style.backgroundColor = "#9b59b6";
 
-      // Memasukkan seluruh data array mentah ke baris tabel Supabase secara massal
       const { error } = await supabaseClient.from('laporan_tagihan').insert(dataMassalSupabase);
       
       if (error) {
@@ -309,11 +313,11 @@
         btn.innerText = "Terkirim! ✅"; btn.style.backgroundColor = "#27ae60";
         muatDataDashboard();
         alert("Data berhasil disinkron! Silakan cek di Tab Monitor.");
-        bukaTab('monitor'); // Otomatis menggeser fokus tab halaman ke Monitor
+        bukaTab('monitor'); // Otomatis pindah tab fokus ke Monitor Dashboard
       }
     }
 
-    // Jalankan inisialisasi pembacaan database pertama kali
+    // Inisialisasi awal saat halaman web dimuat
     muatDataDashboard();
     ambilDataExcel();
     setInterval(muatDataDashboard, 10000); 
