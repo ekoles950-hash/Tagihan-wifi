@@ -52,7 +52,7 @@
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
     
-    <!-- Navigasi Utama -->
+    <!-- Navigasi Tab Utama (1 Apk 2 Fitur) -->
     <div class="tabs">
       <button class="tab-btn active" onclick="bukaTab('monitor')">🖥️ Monitor Tagihan</button>
       <button class="tab-btn" onclick="bukaTab('pelanggan')">📝 Data Sengkuni Net</button>
@@ -82,7 +82,7 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
-    <!-- ================= TAB 1: MONITOR TAGIHAN ================= -->
+    <!-- ================= TAB FEATURE 1: MONITOR TAGIHAN ================= -->
     <div id="tab-monitor" class="tab-content active">
       <div class="dashboard-grid">
         <div class="card lunas">
@@ -102,7 +102,7 @@
       <div id="listMonitor"></div>
     </div>
 
-    <!-- ================= TAB 2: DATA PELANGGAN ================= -->
+    <!-- ================= TAB FEATURE 2: DATA PELANGGAN ================= -->
     <div id="tab-pelanggan" class="tab-content">
       <button id="btn-kirim-semua" class="btn-sync" onclick="laporSemuaKeSupabase()">Kirim Semua Data ke Monitor Tagihan</button>
       <div id="loading-sheet">Memuat data Excel pelanggan...</div>
@@ -118,7 +118,7 @@
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Kredensial Otentik Supabase Milik Ko Eko (wfcmhdqvfcmhdqvfcmhd)
+    // Kredensial Supabase Proyek Milik Ko Eko (wfcmhdqvfcmhdqvfcmhd)
     const SUPABASE_URL = "https://wfcmhdqvfcmhdqvfcmhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmY21oZHF3ZmNtaGRxdmZjbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcyMDAwMDAsImV4cCI6MjA1MDU2MDAwMH0.exampleKey"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -138,7 +138,7 @@
       event.currentTarget.classList.add('active');
     }
 
-    // --- FITUR MONITOR: DASHBOARD MONITOR UTAMA ---
+    // --- FITUR MONITOR: AMBIL & HITUNG DATA DARI TABEL SUPABASE ---
     async function muatDataDashboard() {
       try {
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
@@ -179,16 +179,17 @@
           listMonitor.innerHTML = "<div style='text-align:center; color:#999; padding: 20px;'>Belum ada data di Monitor. Silakan kirim data dari Tab Data Sengkuni Net.</div>";
         }
 
+        // Tampilkan kalkulasi otomatis ke Dashboard Panel Atas
         document.getElementById('dashPemasukan').innerText = `Rp ${totalPemasukan.toLocaleString('id-ID')}`;
         document.getElementById('dashBelumBayar').innerText = `${totalBelumBayar} Orang`;
         document.getElementById('dashNominalBelum').innerText = `Rp ${nominalBelumBayar.toLocaleString('id-ID')}`;
 
       } catch (e) {
-        console.log("Gagal memuat dashboard Supabase:", e);
+        console.log("Error dashboard:", e);
       }
     }
 
-    // --- AMBIL DATA EXCEL PELANGGAN ---
+    // --- FITUR EXCEL: AMBIL DATA DARI PUBLIC SPREADSHEET ---
     function ambilDataExcel() {
       Papa.parse(csvPelanggan, {
         download: true,
@@ -200,7 +201,7 @@
       });
     }
 
-    // --- TAMPILKAN DAFTAR PELANGGAN SPREADSHEET ---
+    // --- TAMPILKAN DAFTAR PELANGGAN SPREADSHEET KE LAYAR ---
     function tampilkanDataSheet(data) {
       const container = document.getElementById('listPelanggan');
       container.innerHTML = "";
@@ -214,10 +215,12 @@
         const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
         const petugas = row[4] ? row[4].toLowerCase().trim() : "";
         
-        // FIX: Kolom status_bayar dan tipe tagihan angka agar pas 100% dengan Supabase
+        let nominalAngka = parseInt(harga) || 0;
+
+        // Mempersiapkan struktur data array murni & nama kolom yang benar
         dataMassalSupabase.push({ 
           nama_klien: nama, 
-          jumlah_tagihan: parseInt(harga), 
+          jumlah_tagihan: nominalAngka, 
           status_bayar: 'BELUM BAYAR' 
         });
         
@@ -226,7 +229,7 @@
         div.innerHTML = `
           <div class="info">
             <span class="nama-sheet">${nama}</span>
-            <span class="detail-sheet">ID: ${idPel} | <b>Rp ${parseInt(harga).toLocaleString('id-ID')}</b></span>
+            <span class="detail-sheet">ID: ${idPel} | <b>Rp ${nominalAngka.toLocaleString('id-ID')}</b></span>
           </div>
           <div class="actions-sheet">
             <button class="btn-sheet btn-wa" onclick="kirimFonnte('${nama}', '${noWa}', '${idPel}', '${harga}', this)">Kirim WA</button>
@@ -237,14 +240,14 @@
       });
     }
 
-    // --- TEMPLATE PESAN TAGIHAN ---
+    // --- FORMAT PESAN OTOMATIS FONNTE ---
     function buatPesan(nama, idPel, harga) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
       return `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nKami sampaikan tagihan layanan internet bulan *${bulan}.${new Date().getFullYear()}*\nDengan ID Pelanggan *${idPel}*\nSebesar *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nPembayaran paling lambat di tanggal *${tgl}*\nPembayaran nunggu tukang narik\nAdmin bendahara : RENDI dan FIRMAN\nuntuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
     }
 
-    // --- TOMBOL: KIRIM WA KE PELANGGAN ---
+    // --- AKSI: TOMBOL KIRIM WA TAGIHAN KE NO PELANGGAN ---
     async function kirimFonnte(nama, noWa, idPel, harga, btn) {
       let hp = noWa.replace(/[^0-9]/g, ''); if (hp.startsWith('0')) hp = '62' + hp.substring(1);
       btn.innerText = "...";
@@ -258,7 +261,7 @@
       } catch (e) { btn.innerText = "Gagal"; }
     }
 
-    // --- TOMBOL: SET LUNAS SATUAN (SHEETS + NOTIF WA BENDAHARA) ---
+    // --- AKSI: SET LUNAS SATUAN (KIRIM SHEET & NOTIFIKASI WA BENDAHARA MASING-MASING) ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Set Lunas untuk " + nama + " via Script?")) return;
       
@@ -269,10 +272,10 @@
       btn.disabled = true;
 
       try {
-        // 1. Simpan laporan pelunasan ke Google Sheets via Apps Script Web App
+        // 1. Simpan baris pelaporan ke Google Sheets melalui Google Apps Script Web App
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        // 2. Kirim Notifikasi konfirmasi WA ke bendahara masing-masing (anti-gagal/terpisah)
+        // 2. Mengirimkan Notifikasi Konfirmasi Laporan Lunas ke WA Bendahara Bersangkutan via Fonnte Loop
         const targetNomor = tujuanWA.split(',');
         for (const nomor of targetNomor) {
           await fetch('https://api.fonnte.com/send', {
@@ -287,24 +290,32 @@
 
         btn.innerText = "Lunas ✅"; 
         btn.style.backgroundColor = "#6c757d";
-        muatDataDashboard(); // Sinkron ulang dashboard agar update data monitor
+        muatDataDashboard(); // Reload data monitor agar update real-time
       } catch (e) { 
-        alert("Error memproses lunas"); 
+        alert("Gagal memproses status lunas."); 
         btn.disabled = false;
         btn.innerText = "Set Lunas";
       }
     }
 
-    // --- TOMBOL: MASSAL INSERT SEMUA DATA EXCEL KE SUPABASE ---
+    // --- AKSI: MASSAL INSERT SEMUA DATA EXCEL SEKALIGUS KE SUPABASE ---
     async function laporSemuaKeSupabase() {
       if(!confirm("Kirim SEMUA data ini ke Monitor Tagihan?")) return;
+      if(dataMassalSupabase.length === 0) {
+        alert("Data kosong, sinkronisasi dibatalkan!");
+        return;
+      }
+
       const btn = document.getElementById('btn-kirim-semua');
       btn.innerText = "Mengirim... ⏳"; btn.disabled = true; btn.style.backgroundColor = "#9b59b6";
 
-      const { error } = await supabaseClient.from('laporan_tagihan').insert(dataMassalSupabase);
+      // Memastikan konversi struktur JSON murni yang dikirim bersih ke server
+      const dataKirim = JSON.parse(JSON.stringify(dataMassalSupabase));
+
+      const { error } = await supabaseClient.from('laporan_tagihan').insert(dataKirim);
       
       if (error) {
-        alert("Gagal kirim massal ke Supabase. Silakan coba kembali."); 
+        alert("Gagal kirim massal ke Supabase: " + error.message); 
         btn.innerText = "Kirim Semua Data"; 
         btn.disabled = false; 
         btn.style.backgroundColor = "#8e44ad";
@@ -313,11 +324,11 @@
         btn.innerText = "Terkirim! ✅"; btn.style.backgroundColor = "#27ae60";
         muatDataDashboard();
         alert("Data berhasil disinkron! Silakan cek di Tab Monitor.");
-        bukaTab('monitor'); // Otomatis pindah tab fokus ke Monitor Dashboard
+        bukaTab('monitor'); // Pindah otomatis fokus tab ke dashboard monitor
       }
     }
 
-    // Inisialisasi awal saat halaman web dimuat
+    // Inisialisasi awal saat halaman web dimuat pertama kali
     muatDataDashboard();
     ambilDataExcel();
     setInterval(muatDataDashboard, 10000); 
