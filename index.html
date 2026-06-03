@@ -109,15 +109,14 @@
   <script>
     // --- 1. KONFIGURASI UTAMA ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
-    
-    // Taruh Kunci Akses Supabase-mu di Sini:
-    const SUPABASE_URL = "https://wfcmhdqxxxxxxxxxxxx.supabase.co"; // Ganti dengan URL Supabase kamu
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; // Ganti dengan Anon Key Supabase kamu
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
+
+    // KUNCI AKSES SUPABASE (Silakan ganti xxxxx dengan sub-domain milik proyek kamu)
+    const SUPABASE_URL = "https://wfcmhdqwfcmhdqwfcmhd.supabase.co"; 
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmY21oZHF3ZmNtaGRxdmZjbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcyMDAwMDAsImV4cCI6MjA1MDU2MDAwMH0.exampleKey"; 
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Nomor HP Bendahara
     const hpFirman = "6282115794996"; 
@@ -138,9 +137,48 @@
     async function muatDataDashboard() {
       try {
         document.getElementById('loading').style.display = 'none';
-        // Integrasi pembacaan database Supabase ditaruh disini
+        
+        // Mengambil data dari tabel Supabase
+        const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
+        if (error) throw error;
+
+        let totalPemasukan = 0;
+        let totalBelumBayar = 0;
+        let nominalBelumBayar = 0;
+        const listMonitor = document.getElementById('listMonitor');
+        listMonitor.innerHTML = "";
+
+        data.forEach(row => {
+          const nama = row.nama_klien;
+          const tagihan = parseInt(row.jumlah_tagihan) || 0;
+          const status = row.status_bayar ? row.status_bayar.toUpperCase().trim() : 'BELUM BAYAR';
+
+          if (status === 'LUNAS') {
+            totalPemasukan += tagihan;
+          } else {
+            totalBelumBayar++;
+            nominalBelumBayar += tagihan;
+          }
+
+          // Tampilkan list data klien di bawah dashboard monitor
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `
+            <div class="info">
+              <span class="nama">${nama}</span>
+              <span class="detail">Tagihan: Rp ${tagihan.toLocaleString('id-ID')} | <b>${status}</b></span>
+            </div>
+          `;
+          listMonitor.appendChild(div);
+        });
+
+        // Update nilai ke kartu dashboard
+        document.getElementById('dashPemasukan').innerText = `Rp ${totalPemasukan.toLocaleString('id-ID')}`;
+        document.getElementById('dashBelumBayar').innerText = `${totalBelumBayar} Orang`;
+        document.getElementById('dashNominalBelum').innerText = `Rp ${nominalBelumBayar.toLocaleString('id-ID')}`;
+
       } catch (e) {
-        console.log("Gagal memuat dashboard");
+        console.log("Gagal memuat dashboard Supabase:", e);
       }
     }
 
@@ -170,7 +208,7 @@
         const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
         const petugas = row[4] ? row[4].toLowerCase().trim() : "";
         
-        // Format disesuaikan dengan kolom Supabase kamu
+        // Dorong data mentah ke array untuk sinkronisasi massal Supabase
         dataMassalSupabase.push({ 
           nama_klien: nama, 
           jumlah_tagihan: parseInt(harga), 
@@ -193,7 +231,7 @@
       });
     }
 
-    // --- LOGIKA PESAN LAYANAN INTERNET ---
+    // --- LOGIKA FORMULA PESAN ---
     function buatPesan(nama, idPel, harga) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
@@ -214,7 +252,7 @@
       } catch (e) { btn.innerText = "Gagal"; }
     }
 
-    // --- TOMBOL SET LUNAS (KIRIM SHEET + KIRIM WA TERPISAH) ---
+    // --- TOMBOL SET LUNAS (KIRIM GOOGLE SHEET + NOTIFIKASI WA BENDAHARA) ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Set Lunas untuk " + nama + "?")) return;
       
@@ -225,10 +263,10 @@
       btn.disabled = true;
 
       try {
-        // 1. Simpan data laporan ke Google Sheets via Apps Script
+        // 1. Simpan data laporan ke Google Sheets via Apps Script bawaan
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        // 2. Kirim Notifikasi WA ke Bendahara satu per satu biar gak macet
+        // 2. Kirim Notifikasi WA ke Bendahara satu per satu secara berurutan agar aman
         const targetNomor = tujuanWA.split(',');
         for (const nomor of targetNomor) {
           await fetch('https://api.fonnte.com/send', {
@@ -243,6 +281,7 @@
 
         btn.innerText = "Lunas ✅"; 
         btn.style.backgroundColor = "#6c757d";
+        muatDataDashboard(); // Sinkron ulang tampilan dashboard
       } catch (e) { 
         alert("Error memproses status lunas."); 
         btn.disabled = false;
@@ -259,16 +298,19 @@
       const { error } = await supabaseClient.from('laporan_tagihan').insert(dataMassalSupabase);
       
       if (error) {
-        alert("Gagal kirim massal ke Supabase"); btn.innerText = "Kirim Semua Data"; btn.disabled = false; btn.style.backgroundColor = "#8e44ad";
+        alert("Gagal kirim massal ke Supabase. Cek kembali setting RLS Proyek Anda."); 
+        btn.innerText = "Kirim Semua Data"; 
+        btn.disabled = false; 
+        btn.style.backgroundColor = "#8e44ad";
       } else {
         btn.innerText = "Terkirim! ✅"; btn.style.backgroundColor = "#27ae60";
         muatDataDashboard();
         alert("Data berhasil disinkron! Silakan cek di Tab Monitor.");
-        bukaTab('monitor');
+        bukaTab('monitor'); // Otomatis berpindah halaman tab
       }
     }
 
-    // Eksekusi awal
+    // Eksekusi awal saat aplikasi dimuat pertama kali
     muatDataDashboard();
     ambilDataExcel();
     setInterval(muatDataDashboard, 10000); 
