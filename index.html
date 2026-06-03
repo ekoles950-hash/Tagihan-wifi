@@ -136,7 +136,7 @@
       if(tabName === 'pelanggan') document.getElementById('btn-tab-pelanggan').classList.add('active');
     }
 
-    // --- FITUR MONITOR: SINKRONISASI & HITUNG REAL-TIME ---
+    // --- FITUR MONITOR: SINKRONISASI DASHBOARD ---
     async function muatDataDashboard() {
       try {
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
@@ -155,9 +155,8 @@
             const namaKlien = row.nama_klien;
             const tagihan = parseInt(row.jumlah_tagihan) || 0;
             
-            let status = 'BELUM BAYAR';
-            if (row.status_bayar) { status = row.status_bayar.toUpperCase().trim(); }
-            else if (row.status) { status = row.status.toUpperCase().trim(); }
+            // HANYA MEMBACA KOLOM STATUS_BAYAR YANG ADA DI DATABASE
+            let status = row.status_bayar ? row.status_bayar.toUpperCase().trim() : 'BELUM BAYAR';
 
             if (status === 'LUNAS') {
               totalPemasukan += tagihan;
@@ -166,7 +165,6 @@
               nominalBelumBayar += tagihan;
             }
 
-            // REVISI: Tombol Set Lunas melempar variabel nama_klien dengan benar ke database
             let tombolAksiDepan = "";
             if (status !== 'LUNAS') {
               tombolAksiDepan = `<button class="btn-lunas" onclick="setLunasMurniDariMonitor('${namaKlien}', this)">Set Lunas</button>`;
@@ -198,17 +196,17 @@
       }
     }
 
-    // --- FIX: FUNGSI TOMBOL MONITOR DEPAN AGAR LANGSUNG MASUK PEMASUKAN ---
+    // --- FIX UTAMA: UPDATE HANYA KE KOLOM STATUS_BAYAR AGAR LANGSUNG MASUK PEMASUKAN ---
     async function setLunasMurniDariMonitor(namaKlienTarget, btn) {
       if(!confirm("Set Lunas untuk " + namaKlienTarget + "?")) return;
       btn.innerText = "...";
       btn.disabled = true;
 
       try {
-        // Tembak update status_bayar dan status langsung ke target nama_klien
+        // HANYA UPDATE KOLOM STATUS_BAYAR (Disesuaikan dengan tabel Supabase yang baru)
         const { error } = await supabaseClient
           .from('laporan_tagihan')
-          .update({ status_bayar: 'LUNAS', status: 'LUNAS' })
+          .update({ status_bayar: 'LUNAS' })
           .eq('nama_klien', namaKlienTarget);
 
         if (error) throw error;
@@ -216,7 +214,7 @@
         btn.innerText = "Lunas ✅";
         btn.style.backgroundColor = "#6c757d";
         
-        // Memanggil fungsi re-kalkulasi agar angka PEMASUKAN (LUNAS) langsung bertambah real-time
+        // Refresh dashboard biar nominalnya masuk ke PEMASUKAN (LUNAS) saat itu juga
         muatDataDashboard();
       } catch (e) {
         alert("Gagal memperbarui status lunas: " + e.message);
@@ -292,6 +290,7 @@
       } catch (e) { btn.innerText = "Error"; }
     }
 
+    // --- FITUR SET LUNAS DI TAB BELAKANG EXCEL (FIX HANYA UPDATE STATUS_BAYAR) ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
@@ -305,9 +304,10 @@
       btn.disabled = true;
 
       try {
+        // Ganti hanya ke status_bayar agar tidak memicu eror skema cache
         await supabaseClient
           .from('laporan_tagihan')
-          .update({ status_bayar: 'LUNAS', status: 'LUNAS' })
+          .update({ status_bayar: 'LUNAS' })
           .eq('nama_klien', nama);
 
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
