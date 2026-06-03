@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tagihan Sengkuni Net</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <!-- Library Resmi Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
@@ -52,13 +51,11 @@
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
     
-    <!-- Tab Navigasi Menu Utama -->
     <div class="tabs">
       <button id="btn-tab-monitor" class="tab-btn active" onclick="bukaTab('monitor')">🖥️ Monitor Tagihan</button>
       <button id="btn-tab-pelanggan" class="tab-btn" onclick="bukaTab('pelanggan')">📝 Data Sengkuni Net</button>
     </div>
 
-    <!-- Panel Konfigurasi Bulan & Tempo -->
     <div class="form-group">
       <label>Pilih Bulan Tagihan:</label>
       <select id="bulanSelect">
@@ -82,7 +79,6 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
-    <!-- ================= PANEL FITUR 1: MONITOR DASHBOARD ================= -->
     <div id="tab-monitor" class="tab-content active">
       <div class="dashboard-grid">
         <div class="card lunas">
@@ -102,7 +98,6 @@
       <div id="listMonitor"></div>
     </div>
 
-    <!-- ================= PANEL FITUR 2: DATA EXCEL PELANGGAN ================= -->
     <div id="tab-pelanggan" class="tab-content">
       <button id="btn-kirim-semua" class="btn-sync" onclick="laporSemuaKeSupabase()">Kirim Semua Data ke Monitor Tagihan</button>
       <div id="loading-sheet">Memuat data Excel pelanggan...</div>
@@ -112,18 +107,18 @@
   </div>
 
   <script>
-    // --- 1. SETTING UTAMA KONFIGURASI ---
+    // --- 1. SETTING UTAMA KONFIGURASI INTEGRASI ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Kredensial Proyek Supabase Asli Milik Ko Eko (wfcmhdqvfcmhdqvfcmhd)
+    // Kredensial Otentik Proyek Supabase Ko Eko (wfcmhdqvfcmhdqvfcmhd)
     const SUPABASE_URL = "https://wfcmhdqvfcmhdqvfcmhd.supabase.co"; 
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmY21oZHF3ZmNtaGRxdmZjbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcyMDAwMDAsImV4cCI6MjA1MDU2MDAwMH0.exampleKey"; 
+    const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // HP Bendahara Lapangan
+    // Kontak HP Bendahara Lapangan Sengkuni Net
     const hpFirman = "6282243047166"; 
     const hpRendi = "6285600409940"; 
 
@@ -324,7 +319,6 @@
       }
     }
 
-    // Jalankan eksekusi awal saat aplikasi dimuat pertama kali
     muatDataDashboard();
     ambilDataExcel();
     setInterval(muatDataDashboard, 10000); 
