@@ -113,14 +113,14 @@
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Kredensial Proyek Supabase Asli Milik Ko Eko (wfcmhdqvfcmhdqvfcmhd)
+    // Kredensial Proyek Supabase
     const SUPABASE_URL = "https://wfcmhdqvfcmhdqvfcmhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmY21oZHF3ZmNtaGRxdmZjbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcyMDAwMDAsImV4cCI6MjA1MDU2MDAwMH0.exampleKey"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Daftar Kontak Utama HP Bendahara Sengkuni Net
-    const hpFirman = "6282115794996"; 
-    const hpRendi = "6281329936605"; 
+    const hpFirman = "6282243047166"; 
+    const hpRendi = "6285600409940"; 
 
     let dataMassalSupabase = [];
 
@@ -201,7 +201,7 @@
     function tampilkanDataSheet(data) {
       const container = document.getElementById('listPelanggan');
       container.innerHTML = "";
-      dataMassalSupabase = []; // Reset ulang data array
+      dataMassalSupabase = []; 
 
       data.forEach(row => {
         if (!row[0]) return;
@@ -213,7 +213,7 @@
         
         let nominalAngka = parseInt(harga) || 0;
 
-        // Memastikan format data massal ter-push bersih dengan nama kolom asli Supabase
+        // FORMAT OBJEK DIPASTIKAN COCOK DENGAN STRUKTUR KOLOM TABEL SUPABASE BIGINT
         dataMassalSupabase.push({ 
           nama_klien: nama, 
           jumlah_tagihan: nominalAngka, 
@@ -228,7 +228,7 @@
             <span class="detail-sheet">ID: ${idPel} | <b>Rp ${nominalAngka.toLocaleString('id-ID')}</b></span>
           </div>
           <div class="actions-sheet">
-            <button class="btn-sheet btn-wa" onclick="kirimFonnte('${nama}', '${noWa}', '${idPel}', '${harga}', this)">Kirim WA</button>
+            <button class="btn-sheet btn-wa" onclick="kirimFonnte('${nama}', '${noWa}', '${idPel}', '${harga}', this)">WA</button>
             <button class="btn-sheet btn-lunas-sheet" onclick="setLunas('${nama}', '${idPel}', '${harga}', '${petugas}', this)">Set Lunas</button>
           </div>
         `;
@@ -240,7 +240,7 @@
     function buatPesan(nama, idPel, harga) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
-      return `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nKami sampaikan tagihan layanan internet bulan *${bulan}.${new Date().getFullYear()}*\nDengan ID Pelanggan *${idPel}*\nSebesar *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nPembayaran paling lambat di tanggal *${tgl}*\nPembayaran nunggu tukang narik\nAdmin bendahara : RENDI dan FIRMAN\nuntuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
+      return `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${idPel}*\nTotal: *Rp ${harga}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
     }
 
     // --- AKSI: TOMBOL KIRIM TAGIHAN FONNTE KE NO PELANGGAN ---
@@ -253,16 +253,19 @@
           headers: { 'Authorization': TOKEN_FONNTE }, 
           body: new URLSearchParams({ 'target': hp, 'message': buatPesan(nama, idPel, harga) }) 
         });
-        btn.innerText = "WA Sent ✅"; btn.style.backgroundColor = "#7f8c8d";
-      } catch (e) { btn.innerText = "Gagal"; }
+        btn.innerText = "OK ✅";
+      } catch (e) { btn.innerText = "Error"; }
     }
 
     // --- AKSI: SET LUNAS SATUAN (KIRIM LAPORAN GOOGLE SHEETS + WA BENDAHARA) ---
     async function setLunas(nama, id, harga, petugas, btn) {
-      if(!confirm("Set Lunas untuk " + nama + " via Script?")) return;
+      if(!confirm("Lunas untuk " + nama + "?")) return;
       
-      let scriptUrl = (petugas === "rendi") ? SCRIPT_RENDI : SCRIPT_FIRMAN;
-      let tujuanWA = (petugas === "firman") ? hpFirman : (petugas === "rendi" ? hpRendi : `${hpFirman},${hpRendi}`);
+      let scriptUrl = SCRIPT_FIRMAN; 
+      let tujuanWA = "";
+      if (petugas === "firman") { tujuanWA = hpFirman; scriptUrl = SCRIPT_FIRMAN; }
+      else if (petugas === "rendi") { tujuanWA = hpRendi; scriptUrl = SCRIPT_RENDI; }
+      else { tujuanWA = hpFirman + "," + hpRendi; }
 
       btn.innerText = "...";
       btn.disabled = true;
@@ -271,24 +274,21 @@
         // 1. Catat transaksi masuk ke log Google Sheets melalui Apps Script
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        // 2. Mengirimkan Notifikasi Konfirmasi WA Terpisah ke HP Bendahara agar tidak macet
-        const targetNomor = tujuanWA.split(',');
-        for (const nomor of targetNomor) {
-          await fetch('https://api.fonnte.com/send', {
-            method: 'POST',
-            headers: { 'Authorization': TOKEN_FONNTE },
-            body: new URLSearchParams({
-              'target': nomor,
-              'message': `✅ *LAPORAN LUNAS SENGKUNI NET*\nNama: ${nama}\nID: ${id}\nNominal: Rp ${parseInt(harga).toLocaleString('id-ID')}\nPetugas Bendahara: ${petugas.toUpperCase()}`
-            })
-          });
-        }
+        // 2. Mengirimkan Notifikasi Konfirmasi WA Terpisah ke HP Bendahara
+        await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: { 'Authorization': TOKEN_FONNTE },
+          body: new URLSearchParams({
+            'target': tujuanWA,
+            'message': `✅ *LAPORAN LUNAS*\nNama: ${nama}\nID: ${id}\nNominal: Rp ${harga}\nPetugas: ${petugas.toUpperCase()}`
+          })
+        });
 
-        btn.innerText = "Lunas ✅"; 
+        btn.innerText = "LUNAS ✅"; 
         btn.style.backgroundColor = "#6c757d";
-        muatDataDashboard(); // Sinkron ulang dashboard agar update data monitor
+        muatDataDashboard(); 
       } catch (e) { 
-        alert("Error memproses lunas"); 
+        alert("Gagal memproses lunas"); 
         btn.disabled = false;
         btn.innerText = "Set Lunas";
       }
@@ -305,7 +305,7 @@
       const btn = document.getElementById('btn-kirim-semua');
       btn.innerText = "Mengirim... ⏳"; btn.disabled = true; btn.style.backgroundColor = "#9b59b6";
 
-      // Parsing data array masal ke JSON murni untuk membuang format string object rusak
+      // Bersihkan pengiriman data
       const dataKirimClean = JSON.parse(JSON.stringify(dataMassalSupabase));
 
       const { error } = await supabaseClient.from('laporan_tagihan').insert(dataKirimClean);
@@ -320,7 +320,7 @@
         btn.innerText = "Terkirim! ✅"; btn.style.backgroundColor = "#27ae60";
         muatDataDashboard();
         alert("Data berhasil disinkron! Silakan cek di Tab Monitor.");
-        bukaTab('monitor'); // Otomatis bergeser ke halaman monitor tagihan dashboard
+        bukaTab('monitor'); 
       }
     }
 
