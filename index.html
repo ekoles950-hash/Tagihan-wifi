@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tagihan Sengkuni Net</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <!-- Library Resmi Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
@@ -51,11 +52,13 @@
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
     
+    <!-- Tab Navigasi Menu Utama -->
     <div class="tabs">
       <button id="btn-tab-monitor" class="tab-btn active" onclick="bukaTab('monitor')">🖥️ Monitor Tagihan</button>
       <button id="btn-tab-pelanggan" class="tab-btn" onclick="bukaTab('pelanggan')">📝 Data Sengkuni Net</button>
     </div>
 
+    <!-- Panel Konfigurasi Bulan & Tempo -->
     <div class="form-group">
       <label>Pilih Bulan Tagihan:</label>
       <select id="bulanSelect">
@@ -79,6 +82,7 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
+    <!-- ================= PANEL FITUR 1: MONITOR DASHBOARD ================= -->
     <div id="tab-monitor" class="tab-content active">
       <div class="dashboard-grid">
         <div class="card lunas">
@@ -98,6 +102,7 @@
       <div id="listMonitor"></div>
     </div>
 
+    <!-- ================= PANEL FITUR 2: DATA EXCEL PELANGGAN ================= -->
     <div id="tab-pelanggan" class="tab-content">
       <button id="btn-kirim-semua" class="btn-sync" onclick="laporSemuaKeSupabase()">Kirim Semua Data ke Monitor Tagihan</button>
       <div id="loading-sheet">Memuat data Excel pelanggan...</div>
@@ -107,18 +112,18 @@
   </div>
 
   <script>
-    // --- 1. SETTING UTAMA KONFIGURASI INTEGRASI ---
+    // --- KONFIGURASI LINK UTAMA ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Kredensial Otentik Proyek Supabase Ko Eko (wfcmhdqvfcmhdqvfcmhd)
-    const SUPABASE_URL = "https://wfcmhdqvfcmhdqvfcmhd.supabase.co"; 
+    // FIX PAS: Menggunakan URL subdomain asli (wfcmhdq) & API Key valid milikmu
+    const SUPABASE_URL = "https://wfcmhdq.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Kontak HP Bendahara Lapangan Sengkuni Net
+    // HP Bendahara Lapangan Sengkuni Net
     const hpFirman = "6282243047166"; 
     const hpRendi = "6285600409940"; 
 
@@ -132,7 +137,7 @@
       if(tabName === 'pelanggan') document.getElementById('btn-tab-pelanggan').classList.add('active');
     }
 
-    // --- FITUR MONITOR: AMBIL DATA DARI SUPABASE ---
+    // --- FITUR MONITOR: SINKRONISASI DASHBOARD ---
     async function muatDataDashboard() {
       try {
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
@@ -151,7 +156,6 @@
             const nama = row.nama_klien;
             const tagihan = parseInt(row.jumlah_tagihan) || 0;
             
-            // Flexibel membaca status pembukuan (bisa dari kolom status_bayar baru atau status lama)
             let status = 'BELUM BAYAR';
             if (row.status_bayar) { status = row.status_bayar.toUpperCase().trim(); }
             else if (row.status) { status = row.status.toUpperCase().trim(); }
@@ -197,7 +201,7 @@
       });
     }
 
-    // --- MENAMPILKAN DATA SPREADSHEET DAN MENYIAPKAN DATA MASSAL ---
+    // --- MENAMPILKAN DATA SHEET & STRUKTUR MASAL ---
     function tampilkanDataSheet(data) {
       const container = document.getElementById('listPelanggan');
       container.innerHTML = "";
@@ -213,12 +217,11 @@
         
         let nominalAngka = parseInt(harga) || 0;
 
-        // PENGIRIMAN DATA DENGAN KEY-VALUE SPESIFIK AGAR AMAN DARI STRUKTUR TABEL YANG TERBALIK-BALIK
+        // Struktur data massal dikunci langsung menggunakan objek nama kolom tabel
         dataMassalSupabase.push({ 
           nama_klien: nama, 
-          jumlah_tagihan: nominalAngka, 
-          status_bayar: 'BELUM BAYAR',
-          status: 'belum bayar'
+          jumlah_tagihan: nominalAngka,
+          status_bayar: 'BELUM BAYAR'
         });
         
         const div = document.createElement('div');
@@ -290,7 +293,7 @@
       }
     }
 
-    // --- MASSAL SINKRONISASI DATA ARRAY KE TABEL SUPABASE ---
+    // --- MASSAL SINKRONISASI DATA KE SERVER SUPABASE ---
     async function laporSemuaKeSupabase() {
       if(!confirm("Kirim SEMUA data ini ke Monitor Tagihan?")) return;
       if(dataMassalSupabase.length === 0) {
@@ -310,7 +313,7 @@
         btn.innerText = "Kirim Semua Data"; 
         btn.disabled = false; 
         btn.style.backgroundColor = "#8e44ad";
-        console.log("Detail Error Supabase:", error);
+        console.log("Detail Error:", error);
       } else {
         btn.innerText = "Terkirim! ✅"; btn.style.backgroundColor = "#27ae60";
         muatDataDashboard();
