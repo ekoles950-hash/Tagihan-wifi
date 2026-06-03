@@ -11,7 +11,7 @@
     .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #1a1a1a; margin-bottom: 25px; border-bottom: 2px solid #25D366; padding-bottom: 10px; }
     
-    /* Style Menu Tab Navigasi */
+    /* Menu Tab Navigasi */
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab-btn { flex: 1; padding: 12px; font-weight: bold; cursor: pointer; border: none; border-radius: 8px; background-color: #e0e0e0; color: #555; transition: 0.3s; }
     .tab-btn.active { background-color: #25D366; color: white; }
@@ -107,24 +107,24 @@
   </div>
 
   <script>
-    // --- 1. KONFIGURASI UTAMA ---
+    // --- 1. KONFIGURASI INTEGRASI ---
     const TOKEN_FONNTE = "CEjeWxk7WvpFJaNL94Km";
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // KUNCI AKSES SUPABASE (Silakan ganti xxxxx dengan sub-domain milik proyek kamu)
+    // Kredensial Supabase Proyek Milik Ko Eko
     const SUPABASE_URL = "https://wfcmhdqwfcmhdqwfcmhd.supabase.co"; 
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmY21oZHF3ZmNtaGRxdmZjbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcyMDAwMDAsImV4cCI6MjA1MDU2MDAwMH0.exampleKey"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Nomor HP Bendahara
+    // Nomor WA Admin Bendahara
     const hpFirman = "6282115794996"; 
     const hpRendi = "6281329936605"; 
 
     let dataMassalSupabase = [];
 
-    // --- FUNGSI NAVIGASI TAB ---
+    // --- NAVIGASI ANTAR TAB ---
     function bukaTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -133,14 +133,13 @@
       event.currentTarget.classList.add('active');
     }
 
-    // --- FUNGSI MONITOR DASHBOARD (SUPABASE) ---
+    // --- FITUR MONITOR: AMBIL & HITUNG DATA DARI TABEL SUPABASE ---
     async function muatDataDashboard() {
       try {
-        document.getElementById('loading').style.display = 'none';
-        
-        // Mengambil data dari tabel Supabase
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
         if (error) throw error;
+
+        document.getElementById('loading').style.display = 'none';
 
         let totalPemasukan = 0;
         let totalBelumBayar = 0;
@@ -160,7 +159,6 @@
             nominalBelumBayar += tagihan;
           }
 
-          // Tampilkan list data klien di bawah dashboard monitor
           const div = document.createElement('div');
           div.className = 'item';
           div.innerHTML = `
@@ -172,17 +170,17 @@
           listMonitor.appendChild(div);
         });
 
-        // Update nilai ke kartu dashboard
+        // Tampilkan kalkulasi otomatis ke Dashboard Panel Atas
         document.getElementById('dashPemasukan').innerText = `Rp ${totalPemasukan.toLocaleString('id-ID')}`;
         document.getElementById('dashBelumBayar').innerText = `${totalBelumBayar} Orang`;
         document.getElementById('dashNominalBelum').innerText = `Rp ${nominalBelumBayar.toLocaleString('id-ID')}`;
 
       } catch (e) {
-        console.log("Gagal memuat dashboard Supabase:", e);
+        console.log("Error dashboard:", e);
       }
     }
 
-    // --- LOAD DATA SPREADSHEET UTAMA ---
+    // --- FITUR EXCEL: AMBIL DATA DARI PUBLIC SPREADSHEET ---
     function ambilDataExcel() {
       Papa.parse(csvPelanggan, {
         download: true,
@@ -194,7 +192,7 @@
       });
     }
 
-    // --- TAMPILKAN DATA SPREADSHEET DI TAB PELANGGAN ---
+    // --- TAMPILKAN DAFTAR PELANGGAN SHEET KE LAYAR ---
     function tampilkanDataSheet(data) {
       const container = document.getElementById('listPelanggan');
       container.innerHTML = "";
@@ -208,7 +206,7 @@
         const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
         const petugas = row[4] ? row[4].toLowerCase().trim() : "";
         
-        // Dorong data mentah ke array untuk sinkronisasi massal Supabase
+        // Mempersiapkan struktur data array untuk fungsi Sinkronisasi Massal Supabase
         dataMassalSupabase.push({ 
           nama_klien: nama, 
           jumlah_tagihan: parseInt(harga), 
@@ -231,14 +229,14 @@
       });
     }
 
-    // --- LOGIKA FORMULA PESAN ---
+    // --- FORMAT PESAN OTOMATIS FONNTE ---
     function buatPesan(nama, idPel, harga) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
       return `sistem chat otomatis tidak perlu di balas❌\nPelanggan SENGKUNI NET\nYth. *${nama}*\nKami sampaikan tagihan layanan internet bulan *${bulan}.${new Date().getFullYear()}*\nDengan ID Pelanggan *${idPel}*\nSebesar *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nPembayaran paling lambat di tanggal *${tgl}*\nPembayaran nunggu tukang narik\nAdmin bendahara : RENDI dan FIRMAN\nuntuk menghindari isolir kecepatan menurun otomatis di jaringan anda`;
     }
 
-    // --- TOMBOL KIRIM TAGIHAN (KE PELANGGAN) ---
+    // --- AKSI: TOMBOL KIRIM WA TAGIHAN KE NO PELANGGAN ---
     async function kirimKePelanggan(nama, noWa, idPel, harga, btn) {
       let hp = noWa.replace(/[^0-9]/g, ''); if (hp.startsWith('0')) hp = '62' + hp.substring(1);
       btn.innerText = "...";
@@ -252,7 +250,7 @@
       } catch (e) { btn.innerText = "Gagal"; }
     }
 
-    // --- TOMBOL SET LUNAS (KIRIM GOOGLE SHEET + NOTIFIKASI WA BENDAHARA) ---
+    // --- AKSI: SET LUNAS SATUAN (KIRIM SHEET & NOTIFIKASI WA BENDAHARA MASING-MASING) ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Set Lunas untuk " + nama + "?")) return;
       
@@ -263,10 +261,10 @@
       btn.disabled = true;
 
       try {
-        // 1. Simpan data laporan ke Google Sheets via Apps Script bawaan
+        // 1. Simpan baris pelaporan ke Google Sheets melalui Google Apps Script Web App
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        // 2. Kirim Notifikasi WA ke Bendahara satu per satu secara berurutan agar aman
+        // 2. Mengirimkan Notifikasi Konfirmasi Laporan Lunas ke WA Bendahara Bersangkutan via Fonnte Loop
         const targetNomor = tujuanWA.split(',');
         for (const nomor of targetNomor) {
           await fetch('https://api.fonnte.com/send', {
@@ -281,15 +279,15 @@
 
         btn.innerText = "Lunas ✅"; 
         btn.style.backgroundColor = "#6c757d";
-        muatDataDashboard(); // Sinkron ulang tampilan dashboard
+        muatDataDashboard(); // Reload data monitor agar update real-time
       } catch (e) { 
-        alert("Error memproses status lunas."); 
+        alert("Gagal memproses set lunas."); 
         btn.disabled = false;
         btn.innerText = "Set Lunas";
       }
     }
 
-    // --- INTEGRASI MASAL KE DATABASE SUPABASE ---
+    // --- AKSI: MASSAL INSERT SEMUA DATA EXCEL SEKALIGUS KE SUPABASE ---
     async function laporSemuaKeSupabase() {
       if(!confirm("Kirim SEMUA data ini ke Monitor Tagihan?")) return;
       const btn = document.getElementById('btn-kirim-semua');
@@ -298,7 +296,7 @@
       const { error } = await supabaseClient.from('laporan_tagihan').insert(dataMassalSupabase);
       
       if (error) {
-        alert("Gagal kirim massal ke Supabase. Cek kembali setting RLS Proyek Anda."); 
+        alert("Gagal kirim massal ke Supabase. Pastikan RLS di Supabase sudah dimatikan."); 
         btn.innerText = "Kirim Semua Data"; 
         btn.disabled = false; 
         btn.style.backgroundColor = "#8e44ad";
@@ -306,14 +304,14 @@
         btn.innerText = "Terkirim! ✅"; btn.style.backgroundColor = "#27ae60";
         muatDataDashboard();
         alert("Data berhasil disinkron! Silakan cek di Tab Monitor.");
-        bukaTab('monitor'); // Otomatis berpindah halaman tab
+        bukaTab('monitor'); // Pindah otomatis fokus tab ke dashboard monitor
       }
     }
 
-    // Eksekusi awal saat aplikasi dimuat pertama kali
+    // Inisialisasi Trigger Pertama Kali Saat Web Dimuat
     muatDataDashboard();
     ambilDataExcel();
-    setInterval(muatDataDashboard, 10000); 
+    setInterval(muatDataDashboard, 10000); // Polling update database Supabase tiap 10 detik otomatis
   </script>
 </body>
 </html>
