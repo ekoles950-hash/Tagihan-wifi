@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tagihan Sengkuni Net</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <!-- Library Resmi Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
@@ -54,13 +53,11 @@
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
     
-    <!-- Tab Navigasi Menu Utama -->
     <div class="tabs">
       <button id="btn-tab-monitor" class="tab-btn active" onclick="bukaTab('monitor')">🖥️ Monitor Tagihan</button>
       <button id="btn-tab-pelanggan" class="tab-btn" onclick="bukaTab('pelanggan')">📝 Data Sengkuni Net</button>
     </div>
 
-    <!-- Panel Konfigurasi Bulan & Tempo -->
     <div class="form-group">
       <label>Pilih Bulan Tagihan:</label>
       <select id="bulanSelect">
@@ -84,7 +81,6 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
-    <!-- ================= PANEL FITUR 1: MONITOR DASHBOARD ================= -->
     <div id="tab-monitor" class="tab-content active">
       <div class="dashboard-grid">
         <div class="card lunas">
@@ -103,11 +99,9 @@
       <div id="loading">Memuat database Monitor...</div>
       <div id="listMonitor"></div>
       
-      <!-- TOMBOL RESET BULANAN -->
       <button id="btn-reset-db" class="btn-reset" onclick="resetDatabaseSupabase()">🔄 Reset Database Ke Bulan Berikutnya</button>
     </div>
 
-    <!-- ================= PANEL FITUR 2: DATA EXCEL PELANGGAN ================= -->
     <div id="tab-pelanggan" class="tab-content">
       <button id="btn-kirim-semua" class="btn-sync" onclick="laporSemuaKeSupabase()">Kirim Semua Data ke Monitor Tagihan</button>
       <div id="loading-sheet">Memuat data Excel pelanggan...</div>
@@ -123,7 +117,7 @@
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // Kredensial Proyek Supabase Bersih Pas
+    // Kredensial Proyek Supabase
     const SUPABASE_URL = "https://wfcmhdqtoftuyfjtyfkk.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -142,7 +136,7 @@
       if(tabName === 'pelanggan') document.getElementById('btn-tab-pelanggan').classList.add('active');
     }
 
-    // --- FITUR MONITOR: SINKRONISASI & TAMPILKAN DAFTAR DI MONITOR ---
+    // --- FITUR MONITOR: SINKRONISASI & HITUNG REAL-TIME ---
     async function muatDataDashboard() {
       try {
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
@@ -158,7 +152,7 @@
 
         if(data && data.length > 0) {
           data.forEach(row => {
-            const nama = row.nama_klien;
+            const namaKlien = row.nama_klien;
             const tagihan = parseInt(row.jumlah_tagihan) || 0;
             
             let status = 'BELUM BAYAR';
@@ -172,17 +166,17 @@
               nominalBelumBayar += tagihan;
             }
 
-            // REKAYASA TOMBOL: Muncul tombol Set Lunas di Monitor depan jika statusnya BELUM BAYAR
+            // REVISI: Tombol Set Lunas melempar variabel nama_klien dengan benar ke database
             let tombolAksiDepan = "";
             if (status !== 'LUNAS') {
-              tombolAksiDepan = `<button class="btn-lunas" onclick="setLunasMurniDariMonitor('${nama}', '${tagihan}', this)">Set Lunas</button>`;
+              tombolAksiDepan = `<button class="btn-lunas" onclick="setLunasMurniDariMonitor('${namaKlien}', this)">Set Lunas</button>`;
             }
 
             const div = document.createElement('div');
             div.className = 'item';
             div.innerHTML = `
               <div class="info">
-                <span class="nama">${nama}</span>
+                <span class="nama">${namaKlien}</span>
                 <span class="detail">Tagihan: Rp ${tagihan.toLocaleString('id-ID')} | <b>${status}</b></span>
               </div>
               <div class="actions">
@@ -204,28 +198,28 @@
       }
     }
 
-    // --- FUNGSI KLIK SET LUNAS LANGSUNG DARI TAB MONITOR DEPAN ---
-    async function setLunasMurniDariMonitor(nama, harga, btn) {
-      if(!confirm("Set Lunas untuk " + nama + " langsung dari Dashboard Monitor?")) return;
+    // --- FIX: FUNGSI TOMBOL MONITOR DEPAN AGAR LANGSUNG MASUK PEMASUKAN ---
+    async function setLunasMurniDariMonitor(namaKlienTarget, btn) {
+      if(!confirm("Set Lunas untuk " + namaKlienTarget + "?")) return;
       btn.innerText = "...";
       btn.disabled = true;
 
       try {
-        // Edit status baris di database Supabase menjadi LUNAS
+        // Tembak update status_bayar dan status langsung ke target nama_klien
         const { error } = await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS', status: 'LUNAS' })
-          .eq('nama_klien', nama);
+          .eq('nama_klien', namaKlienTarget);
 
         if (error) throw error;
 
         btn.innerText = "Lunas ✅";
         btn.style.backgroundColor = "#6c757d";
         
-        // Reload kalkulasi dashboard atas agar langsung bertambah
+        // Memanggil fungsi re-kalkulasi agar angka PEMASUKAN (LUNAS) langsung bertambah real-time
         muatDataDashboard();
       } catch (e) {
-        alert("Gagal update status lunas: " + e.message);
+        alert("Gagal memperbarui status lunas: " + e.message);
         btn.innerText = "Set Lunas";
         btn.disabled = false;
       }
@@ -242,7 +236,6 @@
       });
     }
 
-    // --- MENAMPILKAN DATA SPREADSHEET DI TAB BELAKANG ---
     function tampilkanDataSheet(data) {
       const container = document.getElementById('listPelanggan');
       container.innerHTML = "";
@@ -299,7 +292,6 @@
       } catch (e) { btn.innerText = "Error"; }
     }
 
-    // --- AKSI: SET LUNAS DI TAB DATA SPREADSHEET (LENGKAP DENGAN NOTIFIKASI WA BENDAHARA) ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
@@ -313,16 +305,13 @@
       btn.disabled = true;
 
       try {
-        // Edit status di Supabase menjadi LUNAS
         await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS', status: 'LUNAS' })
           .eq('nama_klien', nama);
 
-        // Kirim laporan ke Google Sheets
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        // Kirim konfirmasi WA ke Bendahara
         await fetch('https://api.fonnte.com/send', {
           method: 'POST',
           headers: { 'Authorization': TOKEN_FONNTE },
@@ -342,7 +331,6 @@
       }
     }
 
-    // --- MASSAL SINKRONISASI DATA KE SERVER SUPABASE ---
     async function laporSemuaKeSupabase() {
       if(!confirm("Kirim SEMUA data ini ke Monitor Tagihan?")) return;
       if(dataMassalSupabase.length === 0) {
@@ -370,12 +358,10 @@
       }
     }
 
-    // --- FITUR RESET DATABASE ---
     async function resetDatabaseSupabase() {
-      const konfirmasi = prompt("⚠️ PERINGATAN KELOLA DATA BULANAN!\nTindakan ini akan MENGHAPUS TOTAL semua data monitor tagihan saat ini untuk berganti ke bulan baru.\n\nKetik kata 'RESET' (huruf besar semua) untuk melanjutkan:");
-      
+      const konfirmasi = prompt("⚠️ PERINGATAN KELOLA DATA BULANAN!\nTindakan ini akan MENGHAPUS TOTAL semua data monitor tagihan saat ini.\n\nKetik kata 'RESET' untuk melanjutkan:");
       if (konfirmasi !== "RESET") {
-        alert("Reset dibatalkan. Kata kunci salah!");
+        alert("Reset dibatalkan.");
         return;
       }
 
@@ -390,10 +376,8 @@
           .neq('nama_klien', 'KOLOM_YANG_TIDAK_MUNGKIN_ADA');
 
         if (error) throw error;
-
         alert("Database Sengkuni Net berhasil dikosongkan!");
         muatDataDashboard();
-
       } catch (e) {
         alert("Gagal mereset database bulanan: " + e.message);
       } finally {
