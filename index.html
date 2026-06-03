@@ -118,8 +118,8 @@
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
-    // FIX PAS: Menggunakan URL subdomain asli (wfcmhdq) & API Key valid milikmu
-    const SUPABASE_URL = "https://wfcmhdq.supabase.co"; 
+    // 100% SINKRON: Menggunakan URL subdomain asli 20 karakter milikmu & API Key yang valid
+    const SUPABASE_URL = "https://wfcmhdqtoftuyfjtyfkk.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -217,7 +217,7 @@
         
         let nominalAngka = parseInt(harga) || 0;
 
-        // Struktur data massal dikunci langsung menggunakan objek nama kolom tabel
+        // Struktur objek dikunci pakai nama kolom langsung biar anti kebalik di database
         dataMassalSupabase.push({ 
           nama_klien: nama, 
           jumlah_tagihan: nominalAngka,
