@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tagihan Sengkuni Net</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <!-- Library Resmi Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; margin: 0; }
@@ -51,11 +52,13 @@
   <div class="container">
     <h2>Tagihan Sengkuni Net</h2>
     
+    <!-- Tab Navigasi Menu Utama -->
     <div class="tabs">
       <button id="btn-tab-monitor" class="tab-btn active" onclick="bukaTab('monitor')">🖥️ Monitor Tagihan</button>
       <button id="btn-tab-pelanggan" class="tab-btn" onclick="bukaTab('pelanggan')">📝 Data Sengkuni Net</button>
     </div>
 
+    <!-- Panel Konfigurasi Bulan & Tempo -->
     <div class="form-group">
       <label>Pilih Bulan Tagihan:</label>
       <select id="bulanSelect">
@@ -79,6 +82,7 @@
       <input type="number" id="tglTempo" value="4">
     </div>
 
+    <!-- ================= PANEL FITUR 1: MONITOR DASHBOARD ================= -->
     <div id="tab-monitor" class="tab-content active">
       <div class="dashboard-grid">
         <div class="card lunas">
@@ -98,6 +102,7 @@
       <div id="listMonitor"></div>
     </div>
 
+    <!-- ================= PANEL FITUR 2: DATA EXCEL PELANGGAN ================= -->
     <div id="tab-pelanggan" class="tab-content">
       <button id="btn-kirim-semua" class="btn-sync" onclick="laporSemuaKeSupabase()">Kirim Semua Data ke Monitor Tagihan</button>
       <div id="loading-sheet">Memuat data Excel pelanggan...</div>
@@ -118,7 +123,7 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmY21oZHF3ZmNtaGRxdmZjbWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcyMDAwMDAsImV4cCI6MjA1MDU2MDAwMH0.exampleKey"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // HP Bendahara
+    // HP Bendahara Lapangan
     const hpFirman = "6282243047166"; 
     const hpRendi = "6285600409940"; 
 
@@ -132,7 +137,7 @@
       if(tabName === 'pelanggan') document.getElementById('btn-tab-pelanggan').classList.add('active');
     }
 
-    // --- FITUR MONITOR: DASHBOARD ATAS ---
+    // --- FITUR MONITOR: AMBIL DATA DARI SUPABASE ---
     async function muatDataDashboard() {
       try {
         const { data, error } = await supabaseClient.from('laporan_tagihan').select('*');
@@ -151,7 +156,7 @@
             const nama = row.nama_klien;
             const tagihan = parseInt(row.jumlah_tagihan) || 0;
             
-            // Flexibel membaca status pembukuan (bisa dari kolom status_bayar atau status lama)
+            // Flexibel membaca status pembukuan (bisa dari kolom status_bayar baru atau status lama)
             let status = 'BELUM BAYAR';
             if (row.status_bayar) { status = row.status_bayar.toUpperCase().trim(); }
             else if (row.status) { status = row.status.toUpperCase().trim(); }
@@ -213,12 +218,12 @@
         
         let nominalAngka = parseInt(harga) || 0;
 
-        // FIX TOTAL: MEMASUKKAN KEY SPESIFIK AGAR COCOK DENGAN SEMUA URUTAN STRUKTUR TABEL SUPABASE
+        // PENGIRIMAN DATA DENGAN KEY-VALUE SPESIFIK AGAR AMAN DARI STRUKTUR TABEL YANG TERBALIK-BALIK
         dataMassalSupabase.push({ 
           nama_klien: nama, 
           jumlah_tagihan: nominalAngka, 
           status_bayar: 'BELUM BAYAR',
-          status: 'belum bayar' // Kita isi dua-duanya biar aman dari bentrok kolom
+          status: 'belum bayar'
         });
         
         const div = document.createElement('div');
@@ -301,7 +306,6 @@
       const btn = document.getElementById('btn-kirim-semua');
       btn.innerText = "Mengirim... ⏳"; btn.disabled = true; btn.style.backgroundColor = "#9b59b6";
 
-      // Bersihkan dan paksa konversi objek data murni
       const dataKirimClean = JSON.parse(JSON.stringify(dataMassalSupabase));
 
       const { error } = await supabaseClient.from('laporan_tagihan').insert(dataKirimClean);
@@ -320,9 +324,10 @@
       }
     }
 
+    // Jalankan eksekusi awal saat aplikasi dimuat pertama kali
     muatDataDashboard();
     ambilDataExcel();
     setInterval(muatDataDashboard, 10000); 
   </script>
 </body>
-</html> n
+</html>
