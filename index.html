@@ -64,10 +64,10 @@
         <option value="Januari">Januari</option>
         <option value="Februari">Februari</option>
         <option value="Maret">Maret</option>
-        <option value="April" selected>April</option>
+        <option value="April">April</option>
         <option value="Mei">Mei</option>
         <option value="Juni">Juni</option>
-        <option value="Juli">Juli</option>
+        <option value="Juli" selected>Juli</option>
         <option value="Agustus">Agustus</option>
         <option value="September">September</option>
         <option value="Oktober">Oktober</option>
@@ -112,8 +112,8 @@
 
   <script>
     // --- KONFIGURASI LINK UTAMA ---
-    // Diperbarui dengan token Fonnte dan nomor tujuan pengiriman baru sesuai instruksi Anda
-    const TOKEN_FONNTE = "6285815124078";
+    // PENTING: Ganti teks di bawah dengan Token asli hasil klik tombol hitam "Token" di Fonnte
+    const TOKEN_FONNTE = "SALIN_TOKEN_DARI_FONNTE_DISINI";
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
@@ -123,7 +123,7 @@
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // HP Bendahara Lapangan Sengkuni Net (Sudah disatukan ke nomor baru Anda)
+    // HP Laporan untuk Admin/Bendahara
     const hpFirman = "6285815124078"; 
     const hpRendi = "6285815124078"; 
 
@@ -156,7 +156,6 @@
             const namaKlien = row.nama_klien;
             const tagihan = parseInt(row.jumlah_tagihan) || 0;
             
-            // HANYA MEMBACA KOLOM STATUS_BAYAR YANG ADA DI DATABASE
             let status = row.status_bayar ? row.status_bayar.toUpperCase().trim() : 'BELUM BAYAR';
 
             if (status === 'LUNAS') {
@@ -197,7 +196,6 @@
       }
     }
 
-    // --- FIX UTAMA: UPDATE HANYA KE KOLOM STATUS_BAYAR AGAR LANGSUNG MASUK PEMASUKAN ---
     async function setLunasMurniDariMonitor(namaKlienTarget, btn) {
       if(!confirm("Set Lunas untuk " + namaKlienTarget + "?")) return;
       btn.innerText = "...";
@@ -273,23 +271,30 @@
     function buatPesan(nama, idPel, harga) {
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
-      return `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${idPel}*\nTotal: *Rp ${harga}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
+      return `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${idPel}*\nTotal: *Rp ${parseInt(harga).toLocaleString('id-ID')}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
     }
 
     async function kirimFonnte(nama, noWa, idPel, harga, btn) {
       let hp = noWa.replace(/[^0-9]/g, ''); if (hp.startsWith('0')) hp = '62' + hp.substring(1);
       btn.innerText = "...";
       try {
-        await fetch('https://api.fonnte.com/send', { 
+        const response = await fetch('https://api.fonnte.com/send', { 
           method: 'POST', 
           headers: { 'Authorization': TOKEN_FONNTE }, 
           body: new URLSearchParams({ 'target': hp, 'message': buatPesan(nama, idPel, harga) }) 
         });
-        btn.innerText = "OK ✅";
-      } catch (e) { btn.innerText = "Error"; }
+        const resData = await response.json();
+        if(resData.status) {
+          btn.innerText = "OK ✅";
+        } else {
+          btn.innerText = "Gagal ❌";
+          console.log("Detail Error Fonnte:", resData);
+        }
+      } catch (e) { 
+        btn.innerText = "Error"; 
+      }
     }
 
-    // --- FITUR SET LUNAS DI TAB DATA SENGKUNI NET ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
@@ -315,7 +320,7 @@
           headers: { 'Authorization': TOKEN_FONNTE },
           body: new URLSearchParams({
             'target': tujuanWA,
-            'message': `✅ *LAPORAN LUNAS*\nNama: ${nama}\nID: ${id}\nNominal: Rp ${harga}\nPetugas: ${petugas.toUpperCase()}`
+            'message': `✅ *LAPORAN LUNAS*\nNama: ${nama}\nID: ${id}\nNominal: Rp ${parseInt(harga).toLocaleString('id-ID')}\nPetugas: ${petugas.toUpperCase()}`
           })
         });
 
@@ -358,7 +363,7 @@
 
     async function resetDatabaseSupabase() {
       const konfirmasi = prompt("⚠️ PERINGATAN KELOLA DATA BULANAN!\nTindakan ini akan MENGHAPUS TOTAL semua data monitor tagihan saat ini.\n\nKetik kata 'RESET' untuk melanjutkan:");
-      if (confrim !== "RESET") {
+      if (konfirmasi !== "RESET") {
         alert("Reset dibatalkan.");
         return;
       }
