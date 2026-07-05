@@ -123,7 +123,7 @@
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // FIX NOMOR: Sekarang ditujukan langsung ke nomor HP Bendahara Lapangan asli
+    // Nomor HP Bendahara Lapangan Asli
     const hpFirman = "6282115794996"; 
     const hpRendi = "6281329936605"; 
 
@@ -294,50 +294,57 @@
       }
     }
 
-    // --- SCRIPT KLIK SET LUNAS DI DATA PELANGGAN ---
+    // --- FIX SINKRONISASI PENGIRIMAN TERPISAH DAN PEMBERSIHAN STRING ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
       let scriptUrl = SCRIPT_FIRMAN; 
-      let tujuanWA = "";
+      let targetList = [];
       
-      // Mengarahkan tujuan WA laporan ke nomor bendahara masing-masing secara akurat
-      if (petugas === "firman") { 
-        tujuanWA = hpFirman; 
+      // Bersihkan spasi tidak terlihat pada string nama petugas dari Excel
+      let petugasClean = petugas.trim().toLowerCase();
+      
+      if (petugasClean === "firman") { 
+        targetList.push(hpFirman); 
         scriptUrl = SCRIPT_FIRMAN; 
-      } else if (petugas === "rendi") { 
-        tujuanWA = hpRendi; 
+      } else if (petugasClean === "rendi") { 
+        targetList.push(hpRendi; 
         scriptUrl = SCRIPT_RENDI; 
       } else { 
-        tujuanWA = hpFirman + "," + hpRendi; 
+        // Jika kolom petugas kosong atau typo, kirim notifikasi secara terpisah ke kedua nomor
+        targetList.push(hpFirman);
+        targetList.push(hpRendi);
       }
 
       btn.innerText = "...";
       btn.disabled = true;
 
       try {
-        // 1. Update status Supabase
+        // 1. Sinkronisasi status LUNAS ke Supabase
         await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS' })
           .eq('nama_klien', nama);
 
-        // 2. Kirim data ke Apps Script (Google Sheets)
+        // 2. Kirim data ke Google Sheets via Apps Script
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        // 3. Kirim WA Laporan Lunas ke Bendahara Lapangan Asli
-        const responseWa = await fetch('https://api.fonnte.com/send', {
-          method: 'POST',
-          headers: { 'Authorization': TOKEN_FONNTE },
-          body: new URLSearchParams({
-            'target': tujuanWA,
-            'message': `✅ *LAPORAN LUNAS*\nNama: ${nama}\nID: ${id}\nNominal: Rp ${parseInt(harga).toLocaleString('id-ID')}\nPetugas: ${petugas.toUpperCase()}`
-          })
-        });
-
-        const resWaData = await responseWa.json();
+        // 3. Kirim notifikasi WA satu per satu secara independen
+        let semuaTerkirim = true;
+        for (let tujuanWA of targetList) {
+          const responseWa = await fetch('https://api.fonnte.com/send', {
+            method: 'POST',
+            headers: { 'Authorization': TOKEN_FONNTE },
+            body: new URLSearchParams({
+              'target': tujuanWA,
+              'message': `✅ *LAPORAN LUNAS*\nNama: ${nama}\nID: ${id}\nNominal: Rp ${parseInt(harga).toLocaleString('id-ID')}\nPetugas: ${petugasClean.toUpperCase() || 'ADMIN'}`
+            })
+          });
+          const resWaData = await responseWa.json();
+          if (!resWaData.status) semuaTerkirim = false;
+        }
         
-        if (resWaData.status) {
+        if (semuaTerkirim) {
           btn.innerText = "LUNAS ✅"; 
           btn.style.backgroundColor = "#6c757d";
         } else {
