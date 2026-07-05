@@ -112,8 +112,9 @@
 
   <script>
     // --- KONFIGURASI LINK UTAMA ---
-    // PENTING: Ganti teks di bawah dengan Token asli hasil klik tombol hitam "Token" di Fonnte
-    const TOKEN_FONNTE = "SALIN_TOKEN_DARI_FONNTE_DISINI";
+    // Token Fonnte aktif milik Anda
+    const TOKEN_FONNTE = "dUxQzRfCNEZRW7vjVx3G";
+    
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
@@ -123,7 +124,7 @@
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // HP Laporan untuk Admin/Bendahara
+    // HP Tujuan Pengiriman Laporan Bendahara
     const hpFirman = "6285815124078"; 
     const hpRendi = "6285815124078"; 
 
@@ -291,10 +292,11 @@
           console.log("Detail Error Fonnte:", resData);
         }
       } catch (e) { 
-        btn.innerText = "Error"; 
+        btn.innerText = "Gagal ❌"; 
       }
     }
 
+    // --- FIX UTAMA: MENAMBAHKAN AUTH HEADER & HANDLING PADA LAPORAN BENDAHARA ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
@@ -308,14 +310,17 @@
       btn.disabled = true;
 
       try {
+        // 1. Sinkronisasi status LUNAS ke Supabase
         await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS' })
           .eq('nama_klien', nama);
 
+        // 2. Kirim data transaksi ke Google Sheet via Apps Script
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        await fetch('https://api.fonnte.com/send', {
+        // 3. Kirim notifikasi WhatsApp ke Bendahara Lapangan
+        const responseWa = await fetch('https://api.fonnte.com/send', {
           method: 'POST',
           headers: { 'Authorization': TOKEN_FONNTE },
           body: new URLSearchParams({
@@ -324,11 +329,20 @@
           })
         });
 
-        btn.innerText = "LUNAS ✅"; 
-        btn.style.backgroundColor = "#6c757d";
+        const resWaData = await responseWa.json();
+        
+        if (resWaData.status) {
+          btn.innerText = "LUNAS ✅"; 
+          btn.style.backgroundColor = "#6c757d";
+        } else {
+          btn.innerText = "Lunas (WA Gagal)";
+          btn.style.backgroundColor = "#d35400";
+          console.log("Gagal kirim WA Bendahara:", resWaData);
+        }
+
         muatDataDashboard(); 
       } catch (e) { 
-        alert("Gagal memproses lunas"); 
+        alert("Gagal memproses lunas: " + e.message); 
         btn.disabled = false;
         btn.innerText = "Set Lunas";
       }
