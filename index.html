@@ -112,7 +112,8 @@
 
   <script>
     // --- KONFIGURASI LINK UTAMA ---
-    const TOKEN_FONNTE = "dUxQzRfCNEZRW7vjVx3G";
+    // Diperbarui dengan token Fonnte dan nomor tujuan pengiriman baru sesuai instruksi Anda
+    const TOKEN_FONNTE = "6285815124078";
     const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
     const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
@@ -122,9 +123,9 @@
     const SUPABASE_KEY = "sb_publishable_TE45MyojofIEUkZyvLkHmg_xnsk92Ld"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // HP Bendahara Lapangan Sengkuni Net
-    const hpFirman = "6282115794996"; 
-    const hpRendi = "6281329936605"; 
+    // HP Bendahara Lapangan Sengkuni Net (Sudah disatukan ke nomor baru Anda)
+    const hpFirman = "6285815124078"; 
+    const hpRendi = "6285815124078"; 
 
     let dataMassalSupabase = [];
 
@@ -203,7 +204,6 @@
       btn.disabled = true;
 
       try {
-        // HANYA UPDATE KOLOM STATUS_BAYAR (Disesuaikan dengan tabel Supabase yang baru)
         const { error } = await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS' })
@@ -214,7 +214,6 @@
         btn.innerText = "Lunas ✅";
         btn.style.backgroundColor = "#6c757d";
         
-        // Refresh dashboard biar nominalnya masuk ke PEMASUKAN (LUNAS) saat itu juga
         muatDataDashboard();
       } catch (e) {
         alert("Gagal memperbarui status lunas: " + e.message);
@@ -290,7 +289,7 @@
       } catch (e) { btn.innerText = "Error"; }
     }
 
-    // --- FITUR SET LUNAS DI TAB BELAKANG EXCEL (FIX HANYA UPDATE STATUS_BAYAR) ---
+    // --- FITUR SET LUNAS DI TAB DATA SENGKUNI NET ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
@@ -304,7 +303,6 @@
       btn.disabled = true;
 
       try {
-        // Ganti hanya ke status_bayar agar tidak memicu eror skema cache
         await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS' })
@@ -360,7 +358,7 @@
 
     async function resetDatabaseSupabase() {
       const konfirmasi = prompt("⚠️ PERINGATAN KELOLA DATA BULANAN!\nTindakan ini akan MENGHAPUS TOTAL semua data monitor tagihan saat ini.\n\nKetik kata 'RESET' untuk melanjutkan:");
-      if (konfirmasi !== "RESET") {
+      if (confrim !== "RESET") {
         alert("Reset dibatalkan.");
         return;
       }
