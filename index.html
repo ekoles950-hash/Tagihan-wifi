@@ -294,24 +294,21 @@
       }
     }
 
-    // --- FIX SINKRONISASI PENGIRIMAN TERPISAH DAN PEMBERSIHAN STRING ---
+    // --- SCRIPT KLIK SET LUNAS DI DATA PELANGGAN (FIX TYPO SYNTAX) ---
     async function setLunas(nama, id, harga, petugas, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
       let scriptUrl = SCRIPT_FIRMAN; 
       let targetList = [];
-      
-      // Bersihkan spasi tidak terlihat pada string nama petugas dari Excel
       let petugasClean = petugas.trim().toLowerCase();
       
       if (petugasClean === "firman") { 
         targetList.push(hpFirman); 
         scriptUrl = SCRIPT_FIRMAN; 
       } else if (petugasClean === "rendi") { 
-        targetList.push(hpRendi; 
+        targetList.push(hpRendi); 
         scriptUrl = SCRIPT_RENDI; 
       } else { 
-        // Jika kolom petugas kosong atau typo, kirim notifikasi secara terpisah ke kedua nomor
         targetList.push(hpFirman);
         targetList.push(hpRendi);
       }
@@ -320,16 +317,16 @@
       btn.disabled = true;
 
       try {
-        // 1. Sinkronisasi status LUNAS ke Supabase
+        // 1. Update status Supabase
         await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS' })
           .eq('nama_klien', nama);
 
-        // 2. Kirim data ke Google Sheets via Apps Script
+        // 2. Kirim data ke Apps Script (Google Sheets)
         await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ 'nama': nama, 'id': id, 'nominal': harga }) });
         
-        // 3. Kirim notifikasi WA satu per satu secara independen
+        // 3. Kirim WA Laporan Lunas ke Bendahara Lapangan Asli secara mandiri
         let semuaTerkirim = true;
         for (let tujuanWA of targetList) {
           const responseWa = await fetch('https://api.fonnte.com/send', {
