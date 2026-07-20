@@ -12,7 +12,7 @@
         button { background: #4a6fa5; color: white; border: none; cursor: pointer; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
-        .btn-wa { background: #25d366; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; }
+        .btn-wa { background: #25d366; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -35,9 +35,9 @@
 </div>
 
 <script>
-    // GANTI DENGAN KUNCI BARU SETELAH REGENERATE
-    const supabase = supabase.createClient('URL_SUPABASE_ANDA', 'KUNCI_API_BARU_ANDA');
-    const FONNTE_TOKEN = 'TOKEN_FONNTE_ANDA';
+    // GANTI DENGAN URL DAN KUNCI API BARU SETELAH REGENERATE
+    const supabase = supabase.createClient('', 'KUNCI_API_BARU_ANDA');
+    const FONNTE_TOKEN = 'TOKEN_FONNTE_ANDA'; // Ganti dengan Token Fonnte kamu
 
     async function fetchData() {
         const { data } = await supabase.from('pelanggan_wifi').select('*');
