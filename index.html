@@ -28,7 +28,7 @@
     const supabase = supabase.createClient('https://butydxuauhtvwojvpixt.supabase.co', 'sb_publishable_yO2CBmW5iJ8UKXw802hvXA_nAz3gr9X');
     const FONNTE_TOKEN = 'TOKEN_FONNTE_ANDA';
 
-    async function fetchData() {
+    async function fetchData() { 
         const { data, error } = await supabase.from('pelanggan_wifi').select('*');
         if (error) { console.error(error); return; }
         const tbody = document.getElementById('dataBody');
