@@ -35,19 +35,20 @@
 </div>
 
 <script>
-    // GANTI DENGAN URL DAN KUNCI API BARU SETELAH REGENERATE
-    const supabase = supabase.createClient('', 'sb_publishable_yO2CBmW5iJ8UKXw802hvXA_nAz3gr9X');
-    const FONNTE_TOKEN = 'TOKEN_FONNTE_ANDA'; // Ganti dengan Token Fonnte kamu
+    // MASUKKAN DATA DI BAWAH INI:
+    const supabase = supabase.createClient('sb_publishable_yO2CBmW5iJ8UKXw802hvXA_nAz3gr9X', 'KUNCI_API_ANDA');
+    const FONNTE_TOKEN = 'TOKEN_FONNTE_ANDA';
 
     async function fetchData() {
-        const { data } = await supabase.from('pelanggan_wifi').select('*');
+        const { data, error } = await supabase.from('pelanggan_wifi').select('*');
+        if (error) { console.error(error); return; }
         const tbody = document.getElementById('dataBody');
         tbody.innerHTML = '';
         if(data) {
             data.forEach(p => {
                 tbody.innerHTML += `<tr>
                     <td>${p.nama}</td>
-                    <td>Rp ${p.tagihan}</td>
+                    <td>Rp ${p.tagihan.toLocaleString()}</td>
                     <td><button class="btn-wa" onclick="kirimWA('${p.no_wa}', '${p.nama}', ${p.tagihan})">WA</button></td>
                 </tr>`;
             });
@@ -63,16 +64,16 @@
         };
         const { error } = await supabase.from('pelanggan_wifi').insert([data]);
         if (error) alert('Error: ' + error.message);
-        else { alert('Berhasil disimpan!'); fetchData(); }
+        else { alert('Data Berhasil Disimpan!'); fetchData(); }
     }
 
     function kirimWA(no, nama, tagihan) {
-        const pesan = `Halo ${nama}, tagihan WiFi Anda sebesar Rp ${tagihan} sudah jatuh tempo. Segera bayar ya.`;
+        const pesan = `Halo ${nama}, tagihan WiFi Anda sebesar Rp ${tagihan.toLocaleString()} sudah jatuh tempo. Segera bayar ya.`;
         fetch('https://api.fonnte.com/send', {
             method: 'POST',
             headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ target: no, message: pesan })
-        }).then(() => alert('Pesan Dikirim!'));
+        }).then(res => res.json()).then(data => alert('Pesan Dikirim!'));
     }
 
     fetchData();
