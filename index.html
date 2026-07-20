@@ -8,23 +8,12 @@
     <style>
         body { font-family: sans-serif; background-color: #f4f4f4; padding: 15px; }
         .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, button { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { background: #4a6fa5; color: white; border: none; cursor: pointer; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
         .btn-wa { background: #25d366; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 12px; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
-
-<div class="card">
-    <h3>Input Pelanggan</h3>
-    <input type="text" id="id_p" placeholder="ID Pelanggan">
-    <input type="text" id="nama" placeholder="Nama">
-    <input type="text" id="no_wa" placeholder="Nomor WA (628...)">
-    <input type="number" id="tagihan" placeholder="Tagihan (Rp)">
-    <button onclick="saveData()">Simpan Data</button>
-</div>
 
 <div class="card">
     <h3>Daftar Pelanggan</h3>
@@ -35,8 +24,8 @@
 </div>
 
 <script>
-    // MASUKKAN DATA DI BAWAH INI:
-    const supabase = supabase.createClient('sb_publishable_yO2CBmW5iJ8UKXw802hvXA_nAz3gr9X', 'KUNCI_API_ANDA');
+    // MASUKKAN KREDENSIAL SUPABASE DAN TOKEN FONNTE KAMU DI SINI
+    const supabase = supabase.createClient('URL_PROYEK_ANDA', 'KUNCI_API_ANDA');
     const FONNTE_TOKEN = 'TOKEN_FONNTE_ANDA';
 
     async function fetchData() {
@@ -53,18 +42,6 @@
                 </tr>`;
             });
         }
-    }
-
-    async function saveData() {
-        const data = {
-            id_pelanggan: document.getElementById('id_p').value,
-            nama: document.getElementById('nama').value,
-            no_wa: document.getElementById('no_wa').value,
-            tagihan: document.getElementById('tagihan').value
-        };
-        const { error } = await supabase.from('pelanggan_wifi').insert([data]);
-        if (error) alert('Error: ' + error.message);
-        else { alert('Data Berhasil Disimpan!'); fetchData(); }
     }
 
     function kirimWA(no, nama, tagihan) {
