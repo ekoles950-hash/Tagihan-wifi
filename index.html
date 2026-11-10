@@ -36,7 +36,7 @@
     .detail, .detail-sheet { font-size: 13px; color: #777; margin-top: 4px; }
     .actions, .actions-sheet { display: flex; gap: 5px; }
     
-    .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
+    .btn-wa { background-color: #25D366; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; text-decoration: none; display: inline-block; }
     .btn-lunas, .btn-lunas-sheet { background-color: #007bff; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
     .btn-sync { background-color: #8e44ad; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-bottom: 15px; display: none; }
     .btn-reset { background-color: #dc3545; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; margin-top: 20px; transition: 0.3s; }
@@ -64,21 +64,21 @@
         <option value="Januari">Januari</option>
         <option value="Februari">Februari</option>
         <option value="Maret">Maret</option>
-        <option value="April" selected>April</option>
+        <option value="April">April</option>
         <option value="Mei">Mei</option>
         <option value="Juni">Juni</option>
         <option value="Juli">Juli</option>
         <option value="Agustus">Agustus</option>
         <option value="September">September</option>
         <option value="Oktober">Oktober</option>
-        <option value="November">November</option>
+        <option value="November" selected>November</option>
         <option value="Desember">Desember</option>
       </select>
     </div>
 
     <div class="form-group">
       <label>Tanggal Jatuh Tempo:</label>
-      <input type="number" id="tglTempo" value="4">
+      <input type="number" id="tglTempo" value="10">
     </div>
 
     <div id="tab-monitor" class="tab-content active">
@@ -112,19 +112,12 @@
 
   <script>
     // --- KONFIGURASI LINK UTAMA ---
-    const TOKEN_FONNTE = "dUxQzRfCNEZRW7vjVx3G";
-    const SCRIPT_FIRMAN = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec";
-    const SCRIPT_RENDI = "https://script.google.com/macros/s/AKfycbwpSA_UfqSUzK6JFZkvJkrftgOqRjKL-HzA8OLtfAQEaOM3iC3H90YjXv6pI3D-kGQ/exec"; 
     const csvPelanggan = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSV673nBl_6Wn_6eBjiJzoSQfHDn0VQRCNTGsjrdo2fLPFZenxVD1MBvatyIJ8mTGuZX58w5UI3uII9/pub?output=csv";
 
     // Kredensial Proyek Supabase
     const SUPABASE_URL = "https://butydxuauhtvwojvpixt.supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_yO2CBmW5iJ8UKXw802hvXA_nAz3gr9X"; 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    // HP Bendahara Lapangan Sengkuni Net
-    const hpFirman = "6282115794996"; 
-    const hpHendri = ""; 
 
     let dataMassalSupabase = [];
 
@@ -256,64 +249,48 @@
             <span class="detail-sheet">ID: ${idPel} | <b>Rp ${nominalAngka.toLocaleString('id-ID')}</b></span>
           </div>
           <div class="actions-sheet">
-            <button class="btn-sheet btn-wa" onclick="kirimFonnte('${nama}', '${noWa}', '${idPel}', '${harga}', this)">WA</button>
-            <button class="btn-sheet btn-lunas-sheet" onclick="setLunas('${nama}', '${idPel}', '${harga}', '${petugas}', this)">Set Lunas</button>
+            <button class="btn-sheet btn-wa" onclick="bukaWaManual('${nama}', '${noWa}', '${idPel}', '${harga}')">WA</button>
+            <button class="btn-sheet btn-lunas-sheet" onclick="setLunas('${nama}', this)">Set Lunas</button>
           </div>
         `;
         container.appendChild(div);
       });
     }
 
-    function buatPesan(nama, idPel, harga) {
+    // --- FUNGSI BUKA WHATSAPP MANUAL ---
+    function bukaWaManual(nama, noWa, idPel, harga) {
+      let hp = noWa.replace(/[^0-9]/g, ''); 
+      if (hp.startsWith('0')) hp = '62' + hp.substring(1);
+      
       const bulan = document.getElementById('bulanSelect').value;
       const tgl = document.getElementById('tglTempo').value;
-      return `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${idPel}*\nTotal: *Rp ${harga}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
+      const nominalFormat = parseInt(harga) ? parseInt(harga).toLocaleString('id-ID') : harga;
+      
+      const pesan = `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${idPel}*\nTotal: *Rp ${nominalFormat}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
+      
+      const urlWa = `https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`;
+      window.open(urlWa, '_blank');
     }
 
-    async function kirimFonnte(nama, noWa, idPel, harga, btn) {
-      let hp = noWa.replace(/[^0-9]/g, ''); if (hp.startsWith('0')) hp = '62' + hp.substring(1);
-      btn.innerText = "...";
-      try {
-        await fetch('https://api.fonnte.com/send', { 
-          method: 'POST', 
-          headers: { 'Authorization': TOKEN_FONNTE }, 
-          body: new URLSearchParams({ 'target': hp, 'message': buatPesan(nama, idPel, harga) }) 
-        });
-        btn.innerText = "OK ✅";
-      } catch (e) { btn.innerText = "Error"; }
-    }
-
-    async function setLunas(nama, id, harga, petugas, btn) {
+    async function setLunas(nama, btn) {
       if(!confirm("Lunas untuk " + nama + "?")) return;
       
-      let tujuanWA = "";
-      if (petugas === "firman") { tujuanWA = hpFirman; }
-      else if (petugas === "Hendri") { tujuanWA = hpRendi; }
-      else { tujuanWA = hpFirman + "," + hpRendi; }
-
       btn.innerText = "...";
       btn.disabled = true;
 
       try {
-        await supabaseClient
+        const { error } = await supabaseClient
           .from('laporan_tagihan')
           .update({ status_bayar: 'LUNAS' })
           .eq('nama_klien', nama);
 
-        await fetch('https://api.fonnte.com/send', {
-          method: 'POST',
-          headers: { 'Authorization': TOKEN_FONNTE },
-          body: new URLSearchParams({
-            'target': tujuanWA,
-            'message': `✅ *LAPORAN LUNAS*\nNama: ${nama}\nID: ${id}\nNominal: Rp ${harga}\nPetugas: ${petugas.toUpperCase()}`
-          })
-        });
+        if (error) throw error;
 
         btn.innerText = "LUNAS ✅"; 
         btn.style.backgroundColor = "#6c757d";
         muatDataDashboard(); 
       } catch (e) { 
-        alert("Gagal memproses lunas"); 
+        alert("Gagal memproses lunas: " + e.message); 
         btn.disabled = false;
         btn.innerText = "Set Lunas";
       }
