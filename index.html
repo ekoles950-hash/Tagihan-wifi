@@ -231,7 +231,6 @@
         const noWa = row[1] ? row[1].toString().trim() : "";
         const idPel = row[2] ? row[2].trim() : "-";
         const harga = row[3] ? row[3].toString().replace(/[^0-9]/g, '') : "0";
-        const petugas = row[4] ? row[4].toLowerCase().trim() : "";
         
         let nominalAngka = parseInt(harga) || 0;
 
@@ -257,7 +256,6 @@
       });
     }
 
-    // --- FUNGSI BUKA WHATSAPP MANUAL ---
     function bukaWaManual(nama, noWa, idPel, harga) {
       let hp = noWa.replace(/[^0-9]/g, ''); 
       if (hp.startsWith('0')) hp = '62' + hp.substring(1);
@@ -266,7 +264,7 @@
       const tgl = document.getElementById('tglTempo').value;
       const nominalFormat = parseInt(harga) ? parseInt(harga).toLocaleString('id-ID') : harga;
       
-      const pesan = `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${idPel}*\nTotal: *Rp ${nominalFormat}*\nTempo: tgl *${tgl}*\nAdmin: RENDI & FIRMAN`;
+      const pesan = `Pelanggan SENGKUNI NET\nYth. *${nama}*\nTagihan internet *${bulan}.${new Date().getFullYear()}*\nID: *${idPel}*\nTotal: *Rp ${nominalFormat}*\nTempo: tgl *${tgl}*\nBayar tepat waktu untuk menghindari isolir/ penurunan daya internet\nAdmin: HENDRI & FIRMAN`;
       
       const urlWa = `https://wa.me/${hp}?text=${encodeURIComponent(pesan)}`;
       window.open(urlWa, '_blank');
